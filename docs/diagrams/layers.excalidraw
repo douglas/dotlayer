@@ -1,0 +1,210 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "dotlayer",
+  "elements": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 300,
+      "y": 40,
+      "width": 400,
+      "height": 40,
+      "text": "Dotlayer — Architecture Layers",
+      "fontSize": 28,
+      "fontFamily": 1,
+      "textAlign": "center"
+    },
+    {
+      "id": "presentation-box",
+      "type": "rectangle",
+      "x": 150,
+      "y": 110,
+      "width": 700,
+      "height": 80,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "#d0bfff",
+      "fillStyle": "solid",
+      "roundness": { "type": 3 }
+    },
+    {
+      "id": "presentation-title",
+      "type": "text",
+      "x": 180,
+      "y": 120,
+      "width": 200,
+      "height": 25,
+      "text": "PRESENTATION",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "fontWeight": "bold"
+    },
+    {
+      "id": "presentation-desc",
+      "type": "text",
+      "x": 180,
+      "y": 150,
+      "width": 640,
+      "height": 25,
+      "text": "CLI — parse argv, dispatch to commands, print output",
+      "fontSize": 16,
+      "fontFamily": 1
+    },
+    {
+      "id": "arrow-pres-app",
+      "type": "arrow",
+      "x": 500,
+      "y": 195,
+      "width": 0,
+      "height": 30,
+      "strokeColor": "#1e1e1e",
+      "strokeWidth": 2,
+      "points": [[0, 0], [0, 30]]
+    },
+    {
+      "id": "application-box",
+      "type": "rectangle",
+      "x": 150,
+      "y": 230,
+      "width": 700,
+      "height": 110,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "#a5d8ff",
+      "fillStyle": "solid",
+      "roundness": { "type": 3 }
+    },
+    {
+      "id": "application-title",
+      "type": "text",
+      "x": 180,
+      "y": 240,
+      "width": 200,
+      "height": 25,
+      "text": "APPLICATION",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "fontWeight": "bold"
+    },
+    {
+      "id": "application-desc",
+      "type": "text",
+      "x": 180,
+      "y": 270,
+      "width": 640,
+      "height": 60,
+      "text": "Commands::Status — detection + package list\nCommands::Install — stow + system files + hooks\nCommands::Update — pull + restow\nCommands::Doctor — health checks",
+      "fontSize": 14,
+      "fontFamily": 1
+    },
+    {
+      "id": "arrow-app-domain",
+      "type": "arrow",
+      "x": 500,
+      "y": 345,
+      "width": 0,
+      "height": 30,
+      "strokeColor": "#1e1e1e",
+      "strokeWidth": 2,
+      "points": [[0, 0], [0, 30]]
+    },
+    {
+      "id": "domain-box",
+      "type": "rectangle",
+      "x": 150,
+      "y": 380,
+      "width": 700,
+      "height": 110,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "#b2f2bb",
+      "fillStyle": "solid",
+      "roundness": { "type": 3 }
+    },
+    {
+      "id": "domain-title",
+      "type": "text",
+      "x": 180,
+      "y": 390,
+      "width": 200,
+      "height": 25,
+      "text": "DOMAIN",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "fontWeight": "bold"
+    },
+    {
+      "id": "domain-desc",
+      "type": "text",
+      "x": 180,
+      "y": 420,
+      "width": 640,
+      "height": 60,
+      "text": "Detection — immutable value object (os, profile, distros)\nDetector — probes system, produces Detection\nConfig — loads YAML, typed accessors with defaults\nResolver — matches directories against Detection, returns ordered list",
+      "fontSize": 14,
+      "fontFamily": 1
+    },
+    {
+      "id": "arrow-domain-infra",
+      "type": "arrow",
+      "x": 500,
+      "y": 495,
+      "width": 0,
+      "height": 30,
+      "strokeColor": "#1e1e1e",
+      "strokeWidth": 2,
+      "points": [[0, 0], [0, 30]]
+    },
+    {
+      "id": "infra-box",
+      "type": "rectangle",
+      "x": 150,
+      "y": 530,
+      "width": 700,
+      "height": 90,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "#ffec99",
+      "fillStyle": "solid",
+      "roundness": { "type": 3 }
+    },
+    {
+      "id": "infra-title",
+      "type": "text",
+      "x": 180,
+      "y": 540,
+      "width": 200,
+      "height": 25,
+      "text": "INFRASTRUCTURE",
+      "fontSize": 20,
+      "fontFamily": 1,
+      "fontWeight": "bold"
+    },
+    {
+      "id": "infra-desc",
+      "type": "text",
+      "x": 180,
+      "y": 570,
+      "width": 640,
+      "height": 40,
+      "text": "Stow — wraps GNU Stow CLI via Open3\nOpen3, YAML, FileUtils — Ruby stdlib",
+      "fontSize": 14,
+      "fontFamily": 1
+    },
+    {
+      "id": "rule-text",
+      "type": "text",
+      "x": 870,
+      "y": 350,
+      "width": 200,
+      "height": 50,
+      "text": "Data flows\ndownward only",
+      "fontSize": 16,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "strokeColor": "#e03131"
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#ffffff",
+    "gridSize": 20
+  },
+  "files": {}
+}

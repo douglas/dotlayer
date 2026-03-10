@@ -1,0 +1,4 @@
+#!/usr/bin/env ruby
+require "dotlayer"
+
+Dotlayer::CLI.new.run(ARGV)

@@ -1,0 +1,180 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "dotlayer",
+  "elements": [
+    {
+      "id": "detect-box",
+      "type": "rectangle",
+      "x": 100,
+      "y": 200,
+      "width": 200,
+      "height": 140,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "#a5d8ff",
+      "fillStyle": "solid",
+      "roundness": { "type": 3 }
+    },
+    {
+      "id": "detect-title",
+      "type": "text",
+      "x": 155,
+      "y": 215,
+      "width": 90,
+      "height": 30,
+      "text": "Detect",
+      "fontSize": 24,
+      "fontFamily": 1,
+      "textAlign": "center"
+    },
+    {
+      "id": "detect-os",
+      "type": "text",
+      "x": 130,
+      "y": 255,
+      "width": 140,
+      "height": 72,
+      "text": "OS\nProfile\nDistros",
+      "fontSize": 16,
+      "fontFamily": 1,
+      "textAlign": "center"
+    },
+    {
+      "id": "resolve-box",
+      "type": "rectangle",
+      "x": 400,
+      "y": 200,
+      "width": 200,
+      "height": 140,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "#b2f2bb",
+      "fillStyle": "solid",
+      "roundness": { "type": 3 }
+    },
+    {
+      "id": "resolve-title",
+      "type": "text",
+      "x": 450,
+      "y": 215,
+      "width": 100,
+      "height": 30,
+      "text": "Resolve",
+      "fontSize": 24,
+      "fontFamily": 1,
+      "textAlign": "center"
+    },
+    {
+      "id": "resolve-desc",
+      "type": "text",
+      "x": 425,
+      "y": 255,
+      "width": 150,
+      "height": 72,
+      "text": "Scan dirs\nMatch tags\nOrder layers",
+      "fontSize": 16,
+      "fontFamily": 1,
+      "textAlign": "center"
+    },
+    {
+      "id": "execute-box",
+      "type": "rectangle",
+      "x": 700,
+      "y": 200,
+      "width": 200,
+      "height": 140,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "#ffec99",
+      "fillStyle": "solid",
+      "roundness": { "type": 3 }
+    },
+    {
+      "id": "execute-title",
+      "type": "text",
+      "x": 750,
+      "y": 215,
+      "width": 100,
+      "height": 30,
+      "text": "Execute",
+      "fontSize": 24,
+      "fontFamily": 1,
+      "textAlign": "center"
+    },
+    {
+      "id": "execute-desc",
+      "type": "text",
+      "x": 725,
+      "y": 255,
+      "width": 150,
+      "height": 72,
+      "text": "stow -d repo\nstow -R\nstow -D",
+      "fontSize": 16,
+      "fontFamily": 1,
+      "textAlign": "center"
+    },
+    {
+      "id": "arrow-1",
+      "type": "arrow",
+      "x": 305,
+      "y": 270,
+      "width": 90,
+      "height": 0,
+      "strokeColor": "#1e1e1e",
+      "strokeWidth": 2,
+      "points": [[0, 0], [90, 0]]
+    },
+    {
+      "id": "arrow-2",
+      "type": "arrow",
+      "x": 605,
+      "y": 270,
+      "width": 90,
+      "height": 0,
+      "strokeColor": "#1e1e1e",
+      "strokeWidth": 2,
+      "points": [[0, 0], [90, 0]]
+    },
+    {
+      "id": "title",
+      "type": "text",
+      "x": 350,
+      "y": 120,
+      "width": 300,
+      "height": 40,
+      "text": "Dotlayer — System Overview",
+      "fontSize": 28,
+      "fontFamily": 1,
+      "textAlign": "center"
+    },
+    {
+      "id": "detection-output",
+      "type": "text",
+      "x": 310,
+      "y": 360,
+      "width": 80,
+      "height": 20,
+      "text": "Detection",
+      "fontSize": 14,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "strokeColor": "#868e96"
+    },
+    {
+      "id": "packages-output",
+      "type": "text",
+      "x": 605,
+      "y": 360,
+      "width": 90,
+      "height": 20,
+      "text": "[repo, pkg]",
+      "fontSize": 14,
+      "fontFamily": 1,
+      "textAlign": "center",
+      "strokeColor": "#868e96"
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#ffffff",
+    "gridSize": 20
+  },
+  "files": {}
+}

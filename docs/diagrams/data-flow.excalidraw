@@ -1,0 +1,251 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "dotlayer",
+  "elements": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 250,
+      "y": 30,
+      "width": 500,
+      "height": 40,
+      "text": "dotlayer install — Data Flow",
+      "fontSize": 28,
+      "fontFamily": 1,
+      "textAlign": "center"
+    },
+    {
+      "id": "argv-box",
+      "type": "rectangle",
+      "x": 380,
+      "y": 90,
+      "width": 240,
+      "height": 50,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "#e9ecef",
+      "fillStyle": "solid",
+      "roundness": { "type": 3 }
+    },
+    {
+      "id": "argv-text",
+      "type": "text",
+      "x": 420,
+      "y": 100,
+      "width": 160,
+      "height": 25,
+      "text": "argv = [\"install\"]",
+      "fontSize": 16,
+      "fontFamily": 3
+    },
+    {
+      "id": "arrow-argv-cli",
+      "type": "arrow",
+      "x": 500,
+      "y": 145,
+      "width": 0,
+      "height": 25,
+      "strokeColor": "#1e1e1e",
+      "strokeWidth": 2,
+      "points": [[0, 0], [0, 25]]
+    },
+    {
+      "id": "cli-box",
+      "type": "rectangle",
+      "x": 380,
+      "y": 175,
+      "width": 240,
+      "height": 50,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "#d0bfff",
+      "fillStyle": "solid",
+      "roundness": { "type": 3 }
+    },
+    {
+      "id": "cli-text",
+      "type": "text",
+      "x": 430,
+      "y": 185,
+      "width": 140,
+      "height": 25,
+      "text": "CLI.run",
+      "fontSize": 18,
+      "fontFamily": 1
+    },
+    {
+      "id": "arrow-cli-cmd",
+      "type": "arrow",
+      "x": 500,
+      "y": 230,
+      "width": 0,
+      "height": 25,
+      "strokeColor": "#1e1e1e",
+      "strokeWidth": 2,
+      "points": [[0, 0], [0, 25]]
+    },
+    {
+      "id": "cmd-box",
+      "type": "rectangle",
+      "x": 330,
+      "y": 260,
+      "width": 340,
+      "height": 50,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "#a5d8ff",
+      "fillStyle": "solid",
+      "roundness": { "type": 3 }
+    },
+    {
+      "id": "cmd-text",
+      "type": "text",
+      "x": 380,
+      "y": 270,
+      "width": 240,
+      "height": 25,
+      "text": "Commands::Install.run",
+      "fontSize": 18,
+      "fontFamily": 1
+    },
+    {
+      "id": "arrow-cmd-detect",
+      "type": "arrow",
+      "x": 420,
+      "y": 315,
+      "width": -120,
+      "height": 40,
+      "strokeColor": "#1e1e1e",
+      "strokeWidth": 2,
+      "points": [[0, 0], [-120, 40]]
+    },
+    {
+      "id": "detect-box",
+      "type": "rectangle",
+      "x": 120,
+      "y": 360,
+      "width": 260,
+      "height": 80,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "#b2f2bb",
+      "fillStyle": "solid",
+      "roundness": { "type": 3 }
+    },
+    {
+      "id": "detect-text",
+      "type": "text",
+      "x": 145,
+      "y": 370,
+      "width": 210,
+      "height": 60,
+      "text": "Detector.detect\n→ Detection(\n    linux, desktop, [omarchy])",
+      "fontSize": 14,
+      "fontFamily": 3
+    },
+    {
+      "id": "arrow-cmd-resolve",
+      "type": "arrow",
+      "x": 580,
+      "y": 315,
+      "width": 120,
+      "height": 40,
+      "strokeColor": "#1e1e1e",
+      "strokeWidth": 2,
+      "points": [[0, 0], [120, 40]]
+    },
+    {
+      "id": "resolve-box",
+      "type": "rectangle",
+      "x": 600,
+      "y": 360,
+      "width": 280,
+      "height": 120,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "#b2f2bb",
+      "fillStyle": "solid",
+      "roundness": { "type": 3 }
+    },
+    {
+      "id": "resolve-text",
+      "type": "text",
+      "x": 620,
+      "y": 370,
+      "width": 240,
+      "height": 100,
+      "text": "Resolver.resolve\n→ [stow, bin, git, zsh,\n   config, config-linux,\n   config-omarchy,\n   config-omarchy-desktop]",
+      "fontSize": 14,
+      "fontFamily": 3
+    },
+    {
+      "id": "arrow-resolve-stow",
+      "type": "arrow",
+      "x": 500,
+      "y": 490,
+      "width": 0,
+      "height": 30,
+      "strokeColor": "#1e1e1e",
+      "strokeWidth": 2,
+      "points": [[0, 0], [0, 30]]
+    },
+    {
+      "id": "stow-box",
+      "type": "rectangle",
+      "x": 330,
+      "y": 525,
+      "width": 340,
+      "height": 80,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "#ffec99",
+      "fillStyle": "solid",
+      "roundness": { "type": 3 }
+    },
+    {
+      "id": "stow-text",
+      "type": "text",
+      "x": 355,
+      "y": 535,
+      "width": 290,
+      "height": 60,
+      "text": "Stow.stow(repo, pkg)\n→ stow -d ~/.public_dotfiles -t ~ config\n→ stow -d ~/.public_dotfiles -t ~ ...",
+      "fontSize": 13,
+      "fontFamily": 3
+    },
+    {
+      "id": "arrow-stow-system",
+      "type": "arrow",
+      "x": 500,
+      "y": 610,
+      "width": 0,
+      "height": 25,
+      "strokeColor": "#1e1e1e",
+      "strokeWidth": 2,
+      "points": [[0, 0], [0, 25]]
+    },
+    {
+      "id": "system-box",
+      "type": "rectangle",
+      "x": 360,
+      "y": 640,
+      "width": 280,
+      "height": 50,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "#ffc9c9",
+      "fillStyle": "solid",
+      "roundness": { "type": 3 }
+    },
+    {
+      "id": "system-text",
+      "type": "text",
+      "x": 390,
+      "y": 650,
+      "width": 220,
+      "height": 25,
+      "text": "System files + hooks (sudo)",
+      "fontSize": 16,
+      "fontFamily": 1
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#ffffff",
+    "gridSize": 20
+  },
+  "files": {}
+}
