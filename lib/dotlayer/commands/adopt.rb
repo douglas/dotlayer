@@ -3,10 +3,11 @@ require "fileutils"
 module Dotlayer
   module Commands
     class Adopt
-      def initialize(config:, paths:, package:, dry_run: false, verbose: false)
+      def initialize(config:, paths:, package:, private: false, dry_run: false, verbose: false)
         @config = config
         @paths = paths
         @package = package
+        @private = private
         @dry_run = dry_run
         @verbose = verbose
         @target = File.expand_path(@config.target)
@@ -37,6 +38,12 @@ module Dotlayer
       private
 
       def find_repo
+        if @private
+          repo = @config.repos.find { |r| r["path"]&.include?("private") }
+          return repo["path"] if repo
+          abort "Error: no private repo found in config"
+        end
+
         @config.repos.each do |repo|
           repo_path = repo["path"]
           next unless repo_path && Dir.exist?(repo_path)

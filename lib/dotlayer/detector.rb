@@ -1,7 +1,7 @@
 require "open3"
 
 module Dotlayer
-  Detection = Data.define(:os, :profile, :distros)
+  Detection = Data.define(:os, :profile, :distros, :groups)
 
   class Detector
     def initialize(config: Config.new)
@@ -9,7 +9,7 @@ module Dotlayer
     end
 
     def detect
-      Detection.new(os: detect_os, profile: detect_profile, distros: detect_distros)
+      Detection.new(os: detect_os, profile: detect_profile, distros: detect_distros, groups: detect_groups)
     end
 
     private
@@ -36,6 +36,18 @@ module Dotlayer
 
     def detect_distros
       @config.distros.select { |_name, distro| distro_detected?(distro) }.keys
+    end
+
+    def detect_groups
+      @config.groups.select { |_name, group| group_detected?(group) }.keys
+    end
+
+    def group_detected?(group)
+      detect_cmd = group["detect"]
+      return false unless detect_cmd
+
+      _, status = Open3.capture2e("sh", "-c", detect_cmd)
+      status.success?
     end
 
     def distro_detected?(distro)

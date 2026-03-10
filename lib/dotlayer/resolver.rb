@@ -1,3 +1,5 @@
+require "set"
+
 module Dotlayer
   class Resolver
     def initialize(config:, detection:)
@@ -12,7 +14,8 @@ module Dotlayer
         repo_path = repo["path"]
         next unless repo_path && Dir.exist?(repo_path)
 
-        packages.concat(resolve_repo(repo_path))
+        base_packages = repo["packages"] || @config.packages
+        packages.concat(resolve_repo(repo_path, base_packages))
       end
 
       packages
@@ -20,25 +23,31 @@ module Dotlayer
 
     private
 
-    def resolve_repo(repo_path)
-      has_base_packages = @config.packages.any? { |pkg| Dir.exist?(File.join(repo_path, pkg)) }
+    def resolve_repo(repo_path, base_packages)
+      has_base_packages = base_packages.any? { |pkg| Dir.exist?(File.join(repo_path, pkg)) }
 
       if has_base_packages
-        resolve_layered_repo(repo_path)
+        resolve_layered_repo(repo_path, base_packages)
       else
         resolve_all_packages(repo_path)
       end
     end
 
     # Repos with base packages use layered convention matching
-    def resolve_layered_repo(repo_path)
+    # plus standalone directories that don't match any layer pattern
+    def resolve_layered_repo(repo_path, base_packages)
       packages = []
 
-      @config.packages.each do |pkg|
+      base_packages.each do |pkg|
         packages << [repo_path, pkg] if Dir.exist?(File.join(repo_path, pkg))
       end
 
-      packages.concat(resolve_layers(repo_path))
+      layers, matched_dirs = resolve_layers(repo_path, base_packages)
+      packages.concat(layers)
+
+      # Standalone directories: not a base package and not matched by any layer
+      standalone = resolve_standalone(repo_path, base_packages, matched_dirs)
+      packages.concat(standalone)
     end
 
     # Repos without base packages stow all top-level directories
@@ -50,31 +59,51 @@ module Dotlayer
         .map { |d| [repo_path, d] }
     end
 
-    def resolve_layers(repo_path)
+    def resolve_layers(repo_path, base_packages)
       dirs = Dir.children(repo_path)
         .select { |d| File.directory?(File.join(repo_path, d)) }
         .reject { |d| d.start_with?(".") }
 
-      base_names = @config.packages
-
       os_packages = []
       distro_packages = []
       distro_profile_packages = []
+      group_packages = []
+      matched_dirs = Set.new(base_packages)
 
       dirs.each do |dir|
-        next if base_names.include?(dir)
+        next if base_packages.include?(dir)
 
         case dir
         when suffix("-#{@detection.os}")
           os_packages << [repo_path, dir]
+          matched_dirs << dir
         when *@detection.distros.map { |d| suffix("-#{d}") }
           distro_packages << [repo_path, dir]
+          matched_dirs << dir
         when *@detection.distros.map { |d| suffix("-#{d}-#{@detection.profile}") }
           distro_profile_packages << [repo_path, dir]
+          matched_dirs << dir
+        when *@detection.groups.map { |g| suffix("-#{g}") }
+          group_packages << [repo_path, dir]
+          matched_dirs << dir
         end
       end
 
-      os_packages + distro_packages + distro_profile_packages
+      layers = os_packages + distro_packages + distro_profile_packages + group_packages
+      [layers, matched_dirs]
+    end
+
+    def resolve_standalone(repo_path, base_packages, matched_dirs)
+      Dir.children(repo_path)
+        .select { |d| File.directory?(File.join(repo_path, d)) }
+        .reject { |d| d.start_with?(".") || matched_dirs.include?(d) || layer_variant?(d, base_packages) }
+        .sort
+        .map { |d| [repo_path, d] }
+    end
+
+    # Returns true if dir looks like a layer variant of any base package (e.g., config-macos, config-fedora-laptop)
+    def layer_variant?(dir, base_packages)
+      base_packages.any? { |pkg| dir.start_with?("#{pkg}-") }
     end
 
     def suffix(s)

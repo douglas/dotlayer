@@ -5,6 +5,7 @@ module Dotlayer
   class Config
     DEFAULT_PACKAGES = %w[stow bin git zsh config].freeze
     DEFAULT_CONFIG_PATHS = %w[
+      ~/.config/dotlayer/dotlayer.yml
       ~/.public_dotfiles/dotlayer.yml
       ~/.dotfiles/dotlayer.yml
     ].freeze
@@ -22,7 +23,9 @@ module Dotlayer
 
     def repos
       @data.fetch("repos", [{ "path" => "~/.public_dotfiles" }]).map do |repo|
-        repo.merge("path" => File.expand_path(repo["path"]))
+        expanded = repo.merge("path" => File.expand_path(repo["path"]))
+        expanded["packages"] = repo["packages"] if repo["packages"]
+        expanded
       end
     end
 
@@ -40,6 +43,10 @@ module Dotlayer
 
     def distros
       @data.fetch("distros", {})
+    end
+
+    def groups
+      @data.fetch("groups", {})
     end
 
     def system_files

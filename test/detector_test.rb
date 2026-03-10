@@ -34,11 +34,12 @@ class DetectorTest < Minitest::Test
   end
 
   def test_detection_is_immutable
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: ["omarchy"])
+    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: ["omarchy"], groups: ["mycompany"])
 
     assert_equal "linux", detection.os
     assert_equal "desktop", detection.profile
     assert_equal ["omarchy"], detection.distros
+    assert_equal ["mycompany"], detection.groups
     assert_raises(NoMethodError) { detection.os = "macos" }
   end
 
@@ -64,5 +65,29 @@ class DetectorTest < Minitest::Test
     detection = detector.detect
 
     refute_includes detection.distros, "missing_distro"
+  end
+
+  def test_detect_group_with_command
+    config = Dotlayer::Config.new
+    config.define_singleton_method(:groups) {
+      { "mycompany" => { "detect" => "true" } }
+    }
+
+    detector = Dotlayer::Detector.new(config: config)
+    detection = detector.detect
+
+    assert_includes detection.groups, "mycompany"
+  end
+
+  def test_detect_group_not_found
+    config = Dotlayer::Config.new
+    config.define_singleton_method(:groups) {
+      { "acme" => { "detect" => "false" } }
+    }
+
+    detector = Dotlayer::Detector.new(config: config)
+    detection = detector.detect
+
+    refute_includes detection.groups, "acme"
   end
 end

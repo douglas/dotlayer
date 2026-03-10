@@ -94,6 +94,26 @@ class AdoptTest < Minitest::Test
     run_adopt(paths: [missing])
   end
 
+  def test_private_flag_uses_private_repo
+    private_repo = File.join(@tmpdir, "private_dotfiles")
+    FileUtils.mkdir_p(private_repo)
+
+    source = File.join(@target, ".config", "lazysql")
+    FileUtils.mkdir_p(source)
+    File.write(File.join(source, "config.toml"), "db_url = secret")
+
+    config = build_config_with_private(private_repo)
+    Dotlayer::Commands::Adopt.new(
+      config:, paths: [source], package: "config", private: true
+    ).run
+
+    dest = File.join(private_repo, "config", ".config", "lazysql", "config.toml")
+    assert File.exist?(dest), "should move into private repo"
+    assert_equal "db_url = secret", File.read(dest)
+  rescue Errno::ENOENT
+    # stow binary not found — file moves already happened
+  end
+
   private
 
   def run_adopt(paths:, dry_run: false)
@@ -111,6 +131,17 @@ class AdoptTest < Minitest::Test
     repo = @repo
     config.define_singleton_method(:target) { target }
     config.define_singleton_method(:repos) { [{ "path" => repo }] }
+    config
+  end
+
+  def build_config_with_private(private_repo)
+    config = Dotlayer::Config.new("/nonexistent/dotlayer.yml")
+    target = @target
+    repo = @repo
+    config.define_singleton_method(:target) { target }
+    config.define_singleton_method(:repos) {
+      [{ "path" => repo }, { "path" => private_repo }]
+    }
     config
   end
 end

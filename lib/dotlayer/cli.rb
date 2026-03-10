@@ -23,12 +23,13 @@ module Dotlayer
     private
 
     def parse_global_options(argv)
-      options = { dry_run: false, verbose: false, config: nil }
+      options = { dry_run: false, verbose: false, config: nil, private: false }
 
       OptionParser.new do |opts|
         opts.on("-c", "--config PATH", "Config file path") { |v| options[:config] = v }
         opts.on("-n", "--dry-run", "Show what would be done") { options[:dry_run] = true }
         opts.on("-v", "--verbose", "Verbose output") { options[:verbose] = true }
+        opts.on("-p", "--private", "Use private repo") { options[:private] = true }
       end.parse!(argv)
 
       options
@@ -44,6 +45,7 @@ module Dotlayer
 
       Commands::Adopt.new(
         config:, paths:, package:,
+        private: options[:private],
         dry_run: options[:dry_run], verbose: options[:verbose]
       ).run
     end
@@ -63,11 +65,13 @@ module Dotlayer
         Options:
           -c, --config PATH   Config file path (default: dotlayer.yml in repo)
           -n, --dry-run       Show what would be done without making changes
+          -p, --private       Use private repo (for adopt command)
           -v, --verbose       Verbose output
 
         Examples:
           dotlayer adopt ~/.config/lazygit config
           dotlayer adopt ~/.config/lazygit ~/.config/lazydocker config
+          dotlayer adopt --private ~/.config/lazysql config
 
       USAGE
     end
