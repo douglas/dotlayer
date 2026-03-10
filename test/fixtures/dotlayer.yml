@@ -1,9 +1,8 @@
-target: ~
+target: "~"
 
 repos:
-  - path: ~/.public_dotfiles
-  - path: ~/.private_dotfiles
-    private: true
+  - path: "~/.public_dotfiles"
+  - path: "~/.private_dotfiles"
 
 packages:
   - stow

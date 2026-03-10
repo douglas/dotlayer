@@ -96,14 +96,46 @@ class ResolverTest < Minitest::Test
     assert_includes packages, "config-fedora-desktop"
   end
 
+  def test_stows_all_packages_from_repo_without_base_packages
+    private_dir = Dir.mktmpdir
+    create_dirs_in(private_dir, "claude", "fonts", "mycompany")
+
+    public_dir = @tmpdir
+    config = Dotlayer::Config.new("/nonexistent/dotlayer.yml")
+    config.define_singleton_method(:repos) {
+      [{ "path" => public_dir }, { "path" => private_dir }]
+    }
+    config.define_singleton_method(:packages) { %w[config] }
+
+    # Public repo has base packages, private repo doesn't
+    create_dirs("config")
+
+    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [])
+    resolver = Dotlayer::Resolver.new(config: config, detection: detection)
+    packages = resolver.resolve
+
+    # Public repo: layered resolution
+    assert_equal ["config"], packages.select { |r, _| r == @tmpdir }.map(&:last)
+
+    # Private repo: all packages, sorted
+    private_packages = packages.select { |r, _| r == private_dir }.map(&:last)
+    assert_equal %w[claude mycompany fonts], private_packages
+  ensure
+    FileUtils.rm_rf(private_dir)
+  end
+
   private
+
+  def create_dirs_in(dir, *names)
+    names.each { |n| FileUtils.mkdir_p(File.join(dir, n)) }
+  end
 
   def create_dirs(*names)
     names.each { |n| FileUtils.mkdir_p(File.join(@tmpdir, n)) }
   end
 
   def config_with_repo(path, packages: nil)
-    config = Dotlayer::Config.new
+    config = Dotlayer::Config.new("/nonexistent/dotlayer.yml")
     config.define_singleton_method(:repos) { [{ "path" => path }] }
     config.define_singleton_method(:packages) { packages } if packages
     config

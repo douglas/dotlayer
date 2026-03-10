@@ -4,12 +4,16 @@ require "pathname"
 module Dotlayer
   class Config
     DEFAULT_PACKAGES = %w[stow bin git zsh config].freeze
+    DEFAULT_CONFIG_PATHS = %w[
+      ~/.public_dotfiles/dotlayer.yml
+      ~/.dotfiles/dotlayer.yml
+    ].freeze
 
     attr_reader :path
 
     def initialize(path = nil)
-      @path = path
-      @data = path && File.exist?(path) ? YAML.load_file(path) : {}
+      @path = path || discover_config
+      @data = @path && File.exist?(@path) ? YAML.load_file(@path) : {}
     end
 
     def target
@@ -44,6 +48,14 @@ module Dotlayer
 
     def hooks
       @data.fetch("hooks", {})
+    end
+
+    private
+
+    def discover_config
+      DEFAULT_CONFIG_PATHS
+        .map { |p| File.expand_path(p) }
+        .find { |p| File.exist?(p) }
     end
   end
 end

@@ -2,7 +2,7 @@ require "test_helper"
 
 class ConfigTest < Minitest::Test
   def test_defaults_without_config_file
-    config = Dotlayer::Config.new
+    config = Dotlayer::Config.new("/nonexistent/dotlayer.yml")
 
     assert_equal File.expand_path("~"), config.target
     assert_equal %w[stow bin git zsh config], config.packages
@@ -39,7 +39,7 @@ class ConfigTest < Minitest::Test
   end
 
   def test_repos_default
-    config = Dotlayer::Config.new
+    config = Dotlayer::Config.new("/nonexistent/dotlayer.yml")
     repos = config.repos
 
     assert_equal 1, repos.size
