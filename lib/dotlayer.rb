@@ -9,6 +9,7 @@ module Dotlayer
   autoload :Stow, "dotlayer/stow"
 
   module Commands
+    autoload :Adopt, "dotlayer/commands/adopt"
     autoload :Status, "dotlayer/commands/status"
     autoload :Install, "dotlayer/commands/install"
     autoload :Update, "dotlayer/commands/update"

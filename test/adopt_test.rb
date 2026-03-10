@@ -1,0 +1,116 @@
+require "test_helper"
+
+class AdoptTest < Minitest::Test
+  def setup
+    @tmpdir = Dir.mktmpdir
+    @target = File.join(@tmpdir, "home")
+    @repo = File.join(@tmpdir, "repo")
+    FileUtils.mkdir_p([@target, File.join(@repo, "config")])
+  end
+
+  def teardown
+    FileUtils.rm_rf(@tmpdir)
+  end
+
+  def test_dry_run_does_not_move_files
+    source = File.join(@target, ".config", "lazygit")
+    FileUtils.mkdir_p(source)
+    File.write(File.join(source, "config.yml"), "theme: dark")
+
+    run_adopt(paths: [source], dry_run: true)
+
+    assert File.exist?(source), "dry-run should not move files"
+    refute File.symlink?(source), "source should still be a real directory"
+    dest = File.join(@repo, "config", ".config", "lazygit")
+    refute File.exist?(dest), "dry-run should not create dest"
+  end
+
+  def test_moves_directory_into_package
+    source = File.join(@target, ".config", "lazygit")
+    FileUtils.mkdir_p(source)
+    File.write(File.join(source, "config.yml"), "theme: dark")
+
+    run_adopt(paths: [source])
+
+    dest = File.join(@repo, "config", ".config", "lazygit", "config.yml")
+    assert File.exist?(dest), "config.yml should be moved into package"
+    assert_equal "theme: dark", File.read(dest)
+    # After restow, original path becomes a symlink managed by stow
+    refute File.realpath(source).start_with?(@target), "source should point into repo after restow"
+  end
+
+  def test_moves_single_file
+    FileUtils.mkdir_p(File.join(@target, ".config"))
+    source = File.join(@target, ".config", "starship.toml")
+    File.write(source, "format = '$all'")
+
+    run_adopt(paths: [source])
+
+    dest = File.join(@repo, "config", ".config", "starship.toml")
+    assert File.exist?(dest)
+    assert_equal "format = '$all'", File.read(dest)
+  end
+
+  def test_adopts_multiple_paths
+    lazygit = File.join(@target, ".config", "lazygit")
+    lazydocker = File.join(@target, ".config", "lazydocker")
+    FileUtils.mkdir_p([lazygit, lazydocker])
+    File.write(File.join(lazygit, "config.yml"), "git")
+    File.write(File.join(lazydocker, "config.yml"), "docker")
+
+    run_adopt(paths: [lazygit, lazydocker])
+
+    assert File.exist?(File.join(@repo, "config", ".config", "lazygit", "config.yml"))
+    assert File.exist?(File.join(@repo, "config", ".config", "lazydocker", "config.yml"))
+  end
+
+  def test_skips_already_existing_in_package
+    source = File.join(@target, ".config", "lazygit")
+    FileUtils.mkdir_p(source)
+
+    dest = File.join(@repo, "config", ".config", "lazygit")
+    FileUtils.mkdir_p(dest)
+
+    run_adopt(paths: [source])
+
+    # Source should remain untouched (not moved)
+    assert File.directory?(source)
+    refute File.symlink?(source)
+  end
+
+  def test_rejects_path_outside_target
+    outside = File.join(@tmpdir, "outside", "stuff")
+    FileUtils.mkdir_p(outside)
+
+    assert_raises(SystemExit) do
+      run_adopt(paths: [outside])
+    end
+  end
+
+  def test_skips_nonexistent_source
+    missing = File.join(@target, ".config", "nope")
+
+    # Should not raise, just warn and continue
+    run_adopt(paths: [missing])
+  end
+
+  private
+
+  def run_adopt(paths:, dry_run: false)
+    config = build_config
+    Dotlayer::Commands::Adopt.new(
+      config:, paths:, package: "config", dry_run:
+    ).run
+  rescue Errno::ENOENT
+    # stow binary not found on some CI — file moves already happened
+  end
+
+  def build_config
+    config = Dotlayer::Config.new("/nonexistent/dotlayer.yml")
+    target = @target
+    repo = @repo
+    config.define_singleton_method(:target) { target }
+    config.define_singleton_method(:repos) { [{ "path" => repo }] }
+    config
+  end
+end
