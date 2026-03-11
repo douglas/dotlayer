@@ -39,8 +39,8 @@ class OutputTest < Minitest::Test
     assert_equal "\e[31mbroken\e[0m\n", output
   end
 
-  def test_warn_text_prints_yellow
-    output = capture_io { warn_text("caution") }.first
+  def test_warning_prints_yellow
+    output = capture_io { warning("caution") }.first
     assert_equal "\e[33mcaution\e[0m\n", output
   end
 

@@ -36,7 +36,7 @@ module Dotlayer
 
         first_repo = @config.repos.first
         unless first_repo
-          warn_text "  Skipping system files: no repos configured"
+          warning "  Skipping system files: no repos configured"
           return
         end
 
@@ -44,13 +44,8 @@ module Dotlayer
         heading "System files"
 
         unless @dry_run
-          puts "  The following files will be installed with sudo:"
-          @config.system_files.each { |e| puts "    #{e["dest"]}" }
-          print "  Continue? [y/N] "
-          unless $stdin.gets&.strip&.downcase == "y"
-            warn_text("  Skipped.")
-            return
-          end
+          return unless confirm("The following files will be installed with sudo:",
+            @config.system_files.map { |e| e["dest"] })
         end
 
         @config.system_files.each do |entry|
@@ -61,7 +56,7 @@ module Dotlayer
           print "  #{dest}... "
 
           if @dry_run
-            warn_text("dry-run")
+            warning("dry-run")
             next
           end
 
@@ -81,6 +76,18 @@ module Dotlayer
         run_hooks("after_system_files")
       end
 
+      def confirm(message, items)
+        puts "  #{message}"
+        items.each { |item| puts "    #{item}" }
+        print "  Continue? [y/N] "
+        if $stdin.gets&.strip&.downcase == "y"
+          true
+        else
+          warning("  Skipped.")
+          false
+        end
+      end
+
       def run_hooks(name)
         commands = Array(@config.hooks[name])
         return if commands.empty?
@@ -89,19 +96,13 @@ module Dotlayer
         heading "Running #{name} hooks"
 
         unless @dry_run
-          puts "  The following commands will be executed:"
-          commands.each { |cmd| puts "    #{cmd}" }
-          print "  Continue? [y/N] "
-          unless $stdin.gets&.strip&.downcase == "y"
-            warn_text("  Skipped.")
-            return
-          end
+          return unless confirm("The following commands will be executed:", commands)
         end
 
         commands.each do |cmd|
           print "  #{cmd}... "
           if @dry_run
-            warn_text("dry-run")
+            warning("dry-run")
           else
             system(cmd) ? ok : error("failed")
           end

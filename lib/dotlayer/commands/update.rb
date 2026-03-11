@@ -28,7 +28,7 @@ module Dotlayer
           print "  #{File.basename(repo.path)}... "
 
           if @dry_run
-            warn_text("dry-run")
+            warning("dry-run")
             next
           end
 
@@ -37,7 +37,7 @@ module Dotlayer
             ok
           else
             error("failed")
-            warn "    #{output.strip}"
+            puts "    #{output.strip}"
           end
         end
 

@@ -52,20 +52,20 @@ module Dotlayer
 
       def adopt_path(source, repo_path)
         unless File.exist?(source)
-          warn "  #{red("Skipping #{source}: does not exist")}"
+          error "  Skipping #{source}: does not exist"
           return
         end
 
         relative = relative_to_target(source)
         unless relative
-          warn "  #{red("Skipping #{source}: not under target #{@target}")}"
+          error "  Skipping #{source}: not under target #{@target}"
           return
         end
 
         dest = File.join(repo_path, @package, relative)
 
         if File.exist?(dest)
-          warn "  #{yellow("Skipping #{relative}: already exists in #{@package}")}"
+          warning "  Skipping #{relative}: already exists in #{@package}"
           return
         end
 

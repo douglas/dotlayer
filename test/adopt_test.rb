@@ -89,9 +89,9 @@ class AdoptTest < Minitest::Test
     outside = File.join(@tmpdir, "outside", "stuff")
     FileUtils.mkdir_p(outside)
 
-    # Should warn and skip, not abort
-    _out, err = capture_io { run_adopt(paths: [outside]) }
-    assert_match(/not under target/, err)
+    # Should print error and skip, not abort
+    out, _err = capture_io { run_adopt(paths: [outside]) }
+    assert_match(/not under target/, out)
   end
 
   def test_skips_nonexistent_source
@@ -120,8 +120,6 @@ class AdoptTest < Minitest::Test
     dest = File.join(private_repo, "config", ".config", "lazysql", "config.toml")
     assert File.exist?(dest), "should move into private repo"
     assert_equal "db_url = secret", File.read(dest)
-  rescue Errno::ENOENT
-    # stow binary not found — file moves already happened
   end
 
   def test_no_private_repo_aborts
@@ -169,8 +167,6 @@ class AdoptTest < Minitest::Test
 
     dest = File.join(@repo, "newpkg", ".config", "lazygit", "config.yml")
     assert File.exist?(dest), "should create file in first repo under new package"
-  rescue Errno::ENOENT
-    # stow binary not found — file moves already happened
   end
 
   private
@@ -180,7 +176,5 @@ class AdoptTest < Minitest::Test
     Dotlayer::Commands::Adopt.new(
       config:, paths:, package: "config", dry_run:
     ).run
-  rescue Errno::ENOENT
-    # stow binary not found on some CI — file moves already happened
   end
 end

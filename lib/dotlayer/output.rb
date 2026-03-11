@@ -12,7 +12,7 @@ module Dotlayer
       puts "\e[31m#{text}\e[0m"
     end
 
-    def warn_text(text)
+    def warning(text)
       puts "\e[33m#{text}\e[0m"
     end
 
@@ -39,7 +39,7 @@ module Dotlayer
     def restow_package(stow, repo_path, package, verb: "Stowing")
       print "  #{verb} #{green(package)}... "
       if stow.dry_run?
-        warn_text("dry-run")
+        warning("dry-run")
       elsif stow.restow(repo_path, package)
         ok
       else
