@@ -66,6 +66,58 @@ class ConfigTest < Minitest::Test
     end
   end
 
+  def test_invalid_yaml_aborts
+    Dir.mktmpdir do |dir|
+      config_path = File.join(dir, "dotlayer.yml")
+      File.write(config_path, "{ invalid yaml :::")
+
+      assert_raises(SystemExit) do
+        capture_io { Dotlayer::Config.new(config_path) }
+      end
+    end
+  end
+
+  def test_non_hash_yaml_aborts
+    Dir.mktmpdir do |dir|
+      config_path = File.join(dir, "dotlayer.yml")
+      File.write(config_path, "- just\n- a\n- list\n")
+
+      assert_raises(SystemExit) do
+        capture_io { Dotlayer::Config.new(config_path) }
+      end
+    end
+  end
+
+  def test_groups_from_config
+    Dir.mktmpdir do |dir|
+      config_path = File.join(dir, "dotlayer.yml")
+      File.write(config_path, <<~YAML)
+        groups:
+          mycompany:
+            detect: test -d ~/src/mycompany
+      YAML
+
+      config = Dotlayer::Config.new(config_path)
+
+      assert_equal({ "mycompany" => { "detect" => "test -d ~/src/mycompany" } }, config.groups)
+    end
+  end
+
+  def test_hooks_from_config
+    Dir.mktmpdir do |dir|
+      config_path = File.join(dir, "dotlayer.yml")
+      File.write(config_path, <<~YAML)
+        hooks:
+          after_system_files:
+            - echo done
+      YAML
+
+      config = Dotlayer::Config.new(config_path)
+
+      assert_equal({ "after_system_files" => ["echo done"] }, config.hooks)
+    end
+  end
+
   def test_repos_filters_nil_and_empty_paths
     Dir.mktmpdir do |dir|
       config_path = File.join(dir, "dotlayer.yml")

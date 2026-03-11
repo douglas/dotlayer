@@ -75,4 +75,43 @@ class DetectorTest < Minitest::Test
 
     refute_includes detection.groups, "acme"
   end
+
+  def test_detect_profile_from_command
+    config = stub_config(
+      profile_detect: "echo laptop",
+      profile_env: "DOTLAYER_TEST_NONEXISTENT"
+    )
+
+    detector = Dotlayer::Detector.new(config: config)
+    detection = detector.detect
+
+    assert_equal "laptop", detection.profile
+  end
+
+  def test_empty_detect_command_skips_distro
+    config = stub_config(distros: { "broken" => { "detect" => "" } })
+
+    detector = Dotlayer::Detector.new(config: config)
+    detection = detector.detect
+
+    refute_includes detection.distros, "broken"
+  end
+
+  def test_nil_detect_command_skips_distro
+    config = stub_config(distros: { "broken" => {} })
+
+    detector = Dotlayer::Detector.new(config: config)
+    detection = detector.detect
+
+    refute_includes detection.distros, "broken"
+  end
+
+  def test_empty_profile_detect_falls_back_to_desktop
+    config = stub_config(profile_detect: "", profile_env: "DOTLAYER_TEST_NONEXISTENT")
+
+    detector = Dotlayer::Detector.new(config: config)
+    detection = detector.detect
+
+    assert_equal "desktop", detection.profile
+  end
 end

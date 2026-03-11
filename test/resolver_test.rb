@@ -168,6 +168,28 @@ class ResolverTest < Minitest::Test
     FileUtils.rm_rf(private_dir)
   end
 
+  def test_skips_hidden_directories
+    create_dirs("config", ".git", ".github")
+    config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])
+    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
+
+    packages = resolve(config, detection)
+
+    refute packages.any? { |p| p.start_with?(".") }, "hidden dirs should be excluded"
+  end
+
+  def test_skips_nonexistent_repo
+    config = stub_config(
+      repos: [build_repo(path: "/nonexistent/repo")],
+      packages: %w[config]
+    )
+    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
+
+    packages = resolve(config, detection)
+
+    assert_empty packages
+  end
+
   private
 
   def resolve(config, detection)

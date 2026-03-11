@@ -124,6 +124,40 @@ class AdoptTest < Minitest::Test
     # stow binary not found — file moves already happened
   end
 
+  def test_no_private_repo_aborts
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo)]  # no private repo
+    )
+    source = File.join(@target, ".config", "test")
+    FileUtils.mkdir_p(source)
+
+    assert_raises(SystemExit) do
+      capture_io do
+        Dotlayer::Commands::Adopt.new(
+          config:, paths: [source], package: "config", private_repo: true
+        ).run
+      end
+    end
+  end
+
+  def test_fallback_to_first_repo_for_new_package
+    source = File.join(@target, ".config", "lazygit")
+    FileUtils.mkdir_p(source)
+    File.write(File.join(source, "config.yml"), "theme: dark")
+
+    # "newpkg" doesn't exist in any repo — should use first repo
+    config = stub_config(target: @target, repos: [build_repo(path: @repo)])
+    Dotlayer::Commands::Adopt.new(
+      config:, paths: [source], package: "newpkg"
+    ).run
+
+    dest = File.join(@repo, "newpkg", ".config", "lazygit", "config.yml")
+    assert File.exist?(dest), "should create file in first repo under new package"
+  rescue Errno::ENOENT
+    # stow binary not found — file moves already happened
+  end
+
   private
 
   def run_adopt(paths:, dry_run: false)

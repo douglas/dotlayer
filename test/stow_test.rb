@@ -40,6 +40,18 @@ class StowTest < Minitest::Test
     refute_empty stow.last_error
   end
 
+  def test_last_error_cleared_after_success
+    stow = Dotlayer::Stow.new(target: @target)
+
+    # First, cause a failure
+    stow.restow(@repo, "nonexistent")
+    assert stow.last_error
+
+    # Then succeed — last_error should be cleared
+    stow.restow(@repo, "pkg")
+    assert_nil stow.last_error
+  end
+
   def test_missing_stow_binary_sets_error
     stow = Dotlayer::Stow.new(target: @target)
 
