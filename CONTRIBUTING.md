@@ -28,7 +28,7 @@ Install gems:
 bundle install
 ```
 
-Dotlayer has **zero runtime dependencies** — everything uses Ruby stdlib. The only dev dependencies are `minitest` and `rake`.
+Dotlayer has **zero runtime dependencies** — everything uses Ruby stdlib. Dev dependencies are `minitest`, `rake`, and `standard` (linter).
 
 ## Running tests
 
@@ -49,6 +49,20 @@ mise x -- bundle exec ruby -Ilib -Itest -e "Dir.glob('test/**/*_test.rb').each {
 ```
 
 Tests use `Dir.mktmpdir` for filesystem fixtures — no external services or complex setup needed.
+
+## Linting
+
+```sh
+bundle exec standardrb
+```
+
+To auto-fix violations:
+
+```sh
+bundle exec standardrb --fix
+```
+
+We use [Standard](https://github.com/standardrb/standard) (based on RuboCop) with zero configuration. Run it before committing.
 
 ### Test suite overview
 
@@ -129,7 +143,7 @@ Lower layers never depend on higher layers. `Detector`, `Config`, and `Resolver`
 
 ### Style
 
-- No linter enforced yet — just keep it consistent with existing code
+- [Standard](https://github.com/standardrb/standard) for linting — run `bundle exec standardrb` before committing
 - Prefer stdlib over gems. Adding a runtime dependency needs a strong justification
 - Use `Data.define` for immutable value objects (Ruby 3.2+)
 - Use `autoload` for lazy loading (no eager requires)
@@ -163,9 +177,9 @@ Detection happens in `Detector`. Distro and group detection is config-driven —
 ## Releasing
 
 ```sh
-# Update version in lib/dotlayer.rb
+# Update VERSION in lib/dotlayer.rb
 # Commit and tag
-git tag v0.1.0
+git tag v0.2.1
 gem build dotlayer.gemspec
-gem push dotlayer-0.1.0.gem
+gem push dotlayer-0.2.1.gem
 ```
