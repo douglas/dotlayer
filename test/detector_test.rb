@@ -116,30 +116,22 @@ class DetectorTest < Minitest::Test
   end
 
   def test_detect_os_macos
-    detector = Dotlayer::Detector.new(config: Dotlayer::Config.new)
-    detector.define_singleton_method(:detect) do
-      os = case "darwin23.0"
-           when /darwin/ then "macos"
-           when /linux/  then "linux"
-           else "unknown"
-           end
-      Dotlayer::Detection.new(os: os, profile: "desktop", distros: [], groups: [])
-    end
+    config = stub_config(profile_env: "DOTLAYER_TEST_NONEXISTENT")
+    detector = Dotlayer::Detector.new(config: config)
+    # Stub the private method to simulate macOS host_os
+    detector.define_singleton_method(:detect_os) { "macos" }
+
     detection = detector.detect
 
     assert_equal "macos", detection.os
   end
 
   def test_detect_os_unknown
-    detector = Dotlayer::Detector.new(config: Dotlayer::Config.new)
-    detector.define_singleton_method(:detect) do
-      os = case "freebsd14"
-           when /darwin/ then "macos"
-           when /linux/  then "linux"
-           else "unknown"
-           end
-      Dotlayer::Detection.new(os: os, profile: "desktop", distros: [], groups: [])
-    end
+    config = stub_config(profile_env: "DOTLAYER_TEST_NONEXISTENT")
+    detector = Dotlayer::Detector.new(config: config)
+    # Stub the private method to simulate an unknown OS
+    detector.define_singleton_method(:detect_os) { "unknown" }
+
     detection = detector.detect
 
     assert_equal "unknown", detection.os

@@ -73,39 +73,23 @@ class DoctorTest < Minitest::Test
     FileUtils.mkdir_p(repo)
 
     config = stub_config(target: tmpdir, repos: [build_repo(path: repo)], packages: %w[config])
-    # Stub resolver to return a package whose directory does not exist
     detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
     detector = Object.new
     detector.define_singleton_method(:detect) { detection }
 
+    # Stub Resolver to return a package whose directory doesn't exist
+    fake_resolver = Object.new
+    fake_resolver.define_singleton_method(:resolve) { [[repo, "nonexistent-pkg"]] }
+
     doctor = Dotlayer::Commands::Doctor.new(config:, detector:)
-    # Override resolve to return a fake package
-    original_run = doctor.method(:run)
-    doctor.define_singleton_method(:run) do
-      detection = detector.detect
-      @packages = [[repo, "nonexistent-pkg"]]
-      # Call private methods via send
-      instance_variable_set(:@issues, [])
-      heading "Dotlayer Doctor"
-      puts
-      send(:check_stow_installed)
-      send(:check_repos_exist)
-      send(:check_packages_exist, @packages)
-      send(:check_broken_symlinks)
-      puts
-      if instance_variable_get(:@issues).empty?
-        ok "No issues found."
-      else
-        issues = instance_variable_get(:@issues)
-        error "#{issues.size} issue(s) found:"
-        issues.each { |issue| puts "  - #{issue}" }
-      end
-    end
+    original_new = Dotlayer::Resolver.method(:new)
+    Dotlayer::Resolver.define_singleton_method(:new) { |**_| fake_resolver }
 
     output = capture_io { doctor.run }.first
 
     assert_match(/Package directory missing/, output)
   ensure
+    Dotlayer::Resolver.define_singleton_method(:new, original_new)
     FileUtils.rm_rf(tmpdir)
   end
 
