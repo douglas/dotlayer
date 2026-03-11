@@ -3,11 +3,13 @@ require "fileutils"
 module Dotlayer
   module Commands
     class Adopt
-      def initialize(config:, paths:, package:, private: false, dry_run: false, verbose: false)
+      include Output
+
+      def initialize(config:, paths:, package:, private_repo: false, dry_run: false, verbose: false)
         @config = config
         @paths = paths
         @package = package
-        @private = private
+        @private_repo = private_repo
         @dry_run = dry_run
         @verbose = verbose
         @target = File.expand_path(@config.target)
@@ -25,23 +27,16 @@ module Dotlayer
           adopt_path(File.expand_path(path), repo_path)
         end
 
-        print "  Restowing \e[32m#{@package}\e[0m... "
-        if @dry_run
-          puts "\e[33mdry-run\e[0m"
-        elsif stow.restow(repo_path, @package)
-          puts "\e[32mok\e[0m"
-        else
-          puts "\e[31mfailed\e[0m"
-        end
+        stow_package(stow, repo_path, @package, verb: "Restowing")
       end
 
       private
 
       def find_repo
-        if @private
-          repo = @config.repos.find { |r| r["path"]&.include?("private") }
+        if @private_repo
+          repo = @config.repos.find { |r| r["private"] }
           return repo["path"] if repo
-          abort "Error: no private repo found in config"
+          abort "Error: no private repo found in config (add private: true to a repo)"
         end
 
         @config.repos.each do |repo|
@@ -58,7 +53,7 @@ module Dotlayer
 
       def adopt_path(source, repo_path)
         unless File.exist?(source)
-          warn "  \e[31mSkipping #{source}: does not exist\e[0m"
+          warn "  #{red("Skipping #{source}: does not exist")}"
           return
         end
 
@@ -70,11 +65,11 @@ module Dotlayer
         dest = File.join(repo_path, @package, relative)
 
         if File.exist?(dest)
-          warn "  \e[33mSkipping #{relative}: already exists in #{@package}\e[0m"
+          warn "  #{yellow("Skipping #{relative}: already exists in #{@package}")}"
           return
         end
 
-        puts "  Moving \e[32m#{relative}\e[0m → #{@package}/"
+        puts "  Moving #{green(relative)} → #{@package}/"
 
         return if @dry_run
 

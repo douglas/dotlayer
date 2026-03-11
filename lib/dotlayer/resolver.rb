@@ -42,28 +42,22 @@ module Dotlayer
         packages << [repo_path, pkg] if Dir.exist?(File.join(repo_path, pkg))
       end
 
-      layers, matched_dirs = resolve_layers(repo_path, base_packages)
+      dirs = top_level_dirs(repo_path)
+      layers, matched_dirs = resolve_layers(repo_path, base_packages, dirs)
       packages.concat(layers)
 
-      # Standalone directories: not a base package and not matched by any layer
-      standalone = resolve_standalone(repo_path, base_packages, matched_dirs)
+      standalone = resolve_standalone(repo_path, base_packages, matched_dirs, dirs)
       packages.concat(standalone)
     end
 
     # Repos without base packages stow all top-level directories
     def resolve_all_packages(repo_path)
-      Dir.children(repo_path)
-        .select { |d| File.directory?(File.join(repo_path, d)) }
-        .reject { |d| d.start_with?(".") }
+      top_level_dirs(repo_path)
         .sort
         .map { |d| [repo_path, d] }
     end
 
-    def resolve_layers(repo_path, base_packages)
-      dirs = Dir.children(repo_path)
-        .select { |d| File.directory?(File.join(repo_path, d)) }
-        .reject { |d| d.start_with?(".") }
-
+    def resolve_layers(repo_path, base_packages, dirs)
       os_packages = []
       distro_packages = []
       distro_profile_packages = []
@@ -93,15 +87,20 @@ module Dotlayer
       [layers, matched_dirs]
     end
 
-    def resolve_standalone(repo_path, base_packages, matched_dirs)
-      Dir.children(repo_path)
-        .select { |d| File.directory?(File.join(repo_path, d)) }
-        .reject { |d| d.start_with?(".") || matched_dirs.include?(d) || layer_variant?(d, base_packages) }
+    def resolve_standalone(repo_path, base_packages, matched_dirs, dirs)
+      dirs
+        .reject { |d| matched_dirs.include?(d) || layer_variant?(d, base_packages) }
         .sort
         .map { |d| [repo_path, d] }
     end
 
-    # Returns true if dir looks like a layer variant of any base package (e.g., config-macos, config-fedora-laptop)
+    def top_level_dirs(repo_path)
+      Dir.children(repo_path)
+        .select { |d| File.directory?(File.join(repo_path, d)) }
+        .reject { |d| d.start_with?(".") }
+    end
+
+    # Returns true if dir looks like a layer variant of any base package
     def layer_variant?(dir, base_packages)
       base_packages.any? { |pkg| dir.start_with?("#{pkg}-") }
     end

@@ -14,7 +14,7 @@ module Dotlayer
 
     def initialize(path = nil)
       @path = path || discover_config
-      @data = @path && File.exist?(@path) ? YAML.load_file(@path) : {}
+      @data = load_config
     end
 
     def target
@@ -23,9 +23,7 @@ module Dotlayer
 
     def repos
       @data.fetch("repos", [{ "path" => "~/.public_dotfiles" }]).map do |repo|
-        expanded = repo.merge("path" => File.expand_path(repo["path"]))
-        expanded["packages"] = repo["packages"] if repo["packages"]
-        expanded
+        repo.merge("path" => File.expand_path(repo["path"]))
       end
     end
 
@@ -58,6 +56,14 @@ module Dotlayer
     end
 
     private
+
+    def load_config
+      return {} unless @path && File.exist?(@path)
+
+      YAML.load_file(@path) || {}
+    rescue Psych::SyntaxError => e
+      abort "Error: invalid YAML in #{@path}: #{e.message}"
+    end
 
     def discover_config
       DEFAULT_CONFIG_PATHS

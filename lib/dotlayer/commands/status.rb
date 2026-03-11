@@ -1,6 +1,8 @@
 module Dotlayer
   module Commands
     class Status
+      include Output
+
       def initialize(config: Config.new, detector: nil)
         @config = config
         @detector = detector || Detector.new(config: @config)
@@ -18,7 +20,7 @@ module Dotlayer
       private
 
       def print_detection(detection)
-        puts "\e[1mSystem Detection\e[0m"
+        heading "System Detection"
         puts "  OS:         #{detection.os}"
         puts "  Profile:    #{detection.profile}"
         puts "  Distros:    #{detection.distros.empty? ? "(none)" : detection.distros.join(", ")}"
@@ -27,11 +29,11 @@ module Dotlayer
       end
 
       def print_packages(packages)
-        puts "\e[1mPackages to stow\e[0m"
+        heading "Packages to stow"
 
         packages.each do |repo_path, package|
           repo_name = File.basename(repo_path)
-          puts "  #{repo_name}/\e[32m#{package}\e[0m"
+          puts "  #{repo_name}/#{green(package)}"
         end
 
         puts

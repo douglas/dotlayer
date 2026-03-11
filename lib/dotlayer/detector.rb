@@ -35,26 +35,18 @@ module Dotlayer
     end
 
     def detect_distros
-      @config.distros.select { |_name, distro| distro_detected?(distro) }.keys
+      @config.distros.select { |_name, entry| command_detected?(entry) }.keys
     end
 
     def detect_groups
-      @config.groups.select { |_name, group| group_detected?(group) }.keys
+      @config.groups.select { |_name, entry| command_detected?(entry) }.keys
     end
 
-    def group_detected?(group)
-      detect_cmd = group["detect"]
-      return false unless detect_cmd
+    def command_detected?(entry)
+      cmd = entry["detect"]
+      return false unless cmd
 
-      _, status = Open3.capture2e("sh", "-c", detect_cmd)
-      status.success?
-    end
-
-    def distro_detected?(distro)
-      detect_cmd = distro["detect"]
-      return false unless detect_cmd
-
-      _, status = Open3.capture2e("sh", "-c", detect_cmd)
+      _, status = Open3.capture2e("sh", "-c", cmd)
       status.success?
     end
   end

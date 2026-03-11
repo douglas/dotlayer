@@ -1,6 +1,8 @@
 module Dotlayer
   module Commands
     class Install
+      include Output
+
       def initialize(config: Config.new, detector: nil, dry_run: false, verbose: false)
         @config = config
         @detector = detector || Detector.new(config: @config)
@@ -14,16 +16,11 @@ module Dotlayer
         packages = resolver.resolve
         stow = Stow.new(target: @config.target, dry_run: @dry_run, verbose: @verbose)
 
-        puts "\e[1mInstalling dotfiles\e[0m (#{detection.os}/#{detection.profile})"
+        heading "Installing dotfiles (#{detection.os}/#{detection.profile})"
         puts
 
         packages.each do |repo_path, package|
-          print "  Stowing \e[32m#{package}\e[0m... "
-          if stow.stow(repo_path, package)
-            puts "\e[32mok\e[0m"
-          else
-            puts "\e[31mfailed\e[0m"
-          end
+          stow_package(stow, repo_path, package)
         end
 
         install_system_files if detection.os == "linux"
@@ -38,7 +35,7 @@ module Dotlayer
         return if @config.system_files.empty?
 
         puts
-        puts "\e[1mSystem files\e[0m"
+        heading "System files"
 
         @config.system_files.each do |entry|
           source = File.expand_path(entry["source"], @config.repos.first["path"])
@@ -48,13 +45,21 @@ module Dotlayer
           print "  #{dest}... "
 
           if @dry_run
-            puts "\e[33mdry-run\e[0m"
+            warn_text("dry-run")
             next
           end
 
-          system("sudo", "cp", source, dest)
-          system("sudo", "chmod", mode, dest) if mode
-          puts "\e[32mok\e[0m"
+          unless system("sudo", "cp", source, dest)
+            error("failed")
+            next
+          end
+
+          if mode && !system("sudo", "chmod", mode, dest)
+            error("chmod failed")
+            next
+          end
+
+          ok
         end
 
         run_hooks("after_system_files")
@@ -65,14 +70,14 @@ module Dotlayer
         return unless commands
 
         puts
-        puts "\e[1mRunning #{name} hooks\e[0m"
+        heading "Running #{name} hooks"
 
         commands.each do |cmd|
           print "  #{cmd}... "
           if @dry_run
-            puts "\e[33mdry-run\e[0m"
+            warn_text("dry-run")
           else
-            system(cmd) ? puts("\e[32mok\e[0m") : puts("\e[31mfailed\e[0m")
+            system(cmd) ? ok : error("failed")
           end
         end
       end

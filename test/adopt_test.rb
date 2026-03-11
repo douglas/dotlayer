@@ -104,7 +104,7 @@ class AdoptTest < Minitest::Test
 
     config = build_config_with_private(private_repo)
     Dotlayer::Commands::Adopt.new(
-      config:, paths: [source], package: "config", private: true
+      config:, paths: [source], package: "config", private_repo: true
     ).run
 
     dest = File.join(private_repo, "config", ".config", "lazysql", "config.toml")
@@ -140,7 +140,7 @@ class AdoptTest < Minitest::Test
     repo = @repo
     config.define_singleton_method(:target) { target }
     config.define_singleton_method(:repos) {
-      [{ "path" => repo }, { "path" => private_repo }]
+      [{ "path" => repo }, { "path" => private_repo, "private" => true }]
     }
     config
   end

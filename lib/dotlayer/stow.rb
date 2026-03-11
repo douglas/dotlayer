@@ -8,6 +8,8 @@ module Dotlayer
       @verbose = verbose
     end
 
+    def dry_run? = @dry_run
+
     def stow(repo_path, package)
       run_stow(repo_path, package)
     end
@@ -24,7 +26,6 @@ module Dotlayer
 
     def run_stow(repo_path, package, restow: false, unstow: false)
       args = ["stow"]
-      args << "-n" if @dry_run
       args << "-v" if @verbose
       args << "-d" << repo_path
       args << "-t" << @target
@@ -37,19 +38,15 @@ module Dotlayer
 
       args << package
 
-      log(args.join(" "))
+      if @verbose || @dry_run
+        $stderr.puts "  \e[36m#{args.join(" ")}\e[0m"
+      end
 
       return true if @dry_run
 
       output, status = Open3.capture2e(*args)
-      unless status.success?
-        warn "  \e[31mError stowing #{package}:\e[0m #{output.strip}"
-      end
+      @last_error = output.strip unless status.success?
       status.success?
-    end
-
-    def log(message)
-      puts "  \e[36m#{message}\e[0m" if @verbose || @dry_run
     end
   end
 end

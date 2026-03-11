@@ -45,7 +45,7 @@ module Dotlayer
 
       Commands::Adopt.new(
         config:, paths:, package:,
-        private: options[:private],
+        private_repo: options[:private],
         dry_run: options[:dry_run], verbose: options[:verbose]
       ).run
     end

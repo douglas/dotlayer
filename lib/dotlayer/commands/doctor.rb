@@ -1,6 +1,8 @@
 module Dotlayer
   module Commands
     class Doctor
+      include Output
+
       def initialize(config: Config.new, detector: nil)
         @config = config
         @detector = detector || Detector.new(config: @config)
@@ -12,20 +14,19 @@ module Dotlayer
         resolver = Resolver.new(config: @config, detection: detection)
         packages = resolver.resolve
 
-        puts "\e[1mDotlayer Doctor\e[0m"
+        heading "Dotlayer Doctor"
         puts
 
         check_stow_installed
         check_repos_exist
         check_packages_exist(packages)
         check_broken_symlinks
-        check_missing_includes
 
         puts
         if @issues.empty?
-          puts "\e[32mNo issues found.\e[0m"
+          ok "No issues found."
         else
-          puts "\e[31m#{@issues.size} issue(s) found:\e[0m"
+          error "#{@issues.size} issue(s) found:"
           @issues.each { |issue| puts "  - #{issue}" }
         end
       end
@@ -35,9 +36,9 @@ module Dotlayer
       def check_stow_installed
         print "  Checking stow... "
         if system("which", "stow", out: File::NULL, err: File::NULL)
-          puts "\e[32minstalled\e[0m"
+          ok "installed"
         else
-          puts "\e[31mmissing\e[0m"
+          error "missing"
           @issues << "GNU Stow is not installed"
         end
       end
@@ -47,9 +48,9 @@ module Dotlayer
           path = repo["path"]
           print "  Checking repo #{path}... "
           if Dir.exist?(path)
-            puts "\e[32mexists\e[0m"
+            ok "exists"
           else
-            puts "\e[31mmissing\e[0m"
+            error "missing"
             @issues << "Repo not found: #{path}"
           end
         end
@@ -68,35 +69,13 @@ module Dotlayer
         print "  Checking for broken symlinks in #{@config.target}... "
         broken = find_broken_symlinks(@config.target)
         if broken.empty?
-          puts "\e[32mnone\e[0m"
+          ok "none"
         else
-          puts "\e[33m#{broken.size} found\e[0m"
+          warn_text "#{broken.size} found"
           broken.each do |link|
             @issues << "Broken symlink: #{link} -> #{File.readlink(link)}"
           end
         end
-      end
-
-      def check_missing_includes
-        ghostty_config = File.join(@config.target, ".config", "ghostty", "config")
-        return unless File.exist?(ghostty_config)
-
-        print "  Checking Ghostty config-file includes... "
-
-        File.readlines(ghostty_config).each do |line|
-          next unless line =~ /\Aconfig-file\s*=\s*(\S+)/
-          include_file = $1
-          next if include_file.start_with?("?") # optional include
-
-          include_path = File.join(File.dirname(ghostty_config), include_file)
-          unless File.exist?(include_path)
-            puts "\e[31mmissing\e[0m"
-            @issues << "Ghostty config references missing include: #{include_path}"
-            return
-          end
-        end
-
-        puts "\e[32mok\e[0m"
       end
 
       def find_broken_symlinks(dir)
