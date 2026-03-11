@@ -25,7 +25,7 @@ module Dotlayer
 
     def repos
       @data.fetch("repos", [{ "path" => "~/.public_dotfiles" }]).filter_map do |entry|
-        path = entry["path"]
+        path = entry["path"]&.to_s
         next if path.nil? || path.empty?
 
         Repo.new(

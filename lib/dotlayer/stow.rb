@@ -32,7 +32,7 @@ module Dotlayer
       return true if @dry_run
 
       output, status = Open3.capture2e(*args)
-      @last_error = output.strip unless status.success?
+      @last_error = status.success? ? nil : output.strip
       status.success?
     rescue Errno::ENOENT
       @last_error = "GNU Stow is not installed. Install it with your package manager."

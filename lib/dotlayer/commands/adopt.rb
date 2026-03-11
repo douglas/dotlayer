@@ -27,7 +27,7 @@ module Dotlayer
           adopt_path(File.expand_path(path), repo_path)
         end
 
-        restow_package(stow, repo_path, @package)
+        restow_package(stow, repo_path, @package, verb: "Restowing")
       end
 
       private
@@ -74,17 +74,6 @@ module Dotlayer
 
         FileUtils.mkdir_p(File.dirname(dest))
         FileUtils.mv(source, dest)
-      end
-
-      def restow_package(stow, repo_path, package)
-        print "  Restowing #{green(package)}... "
-        if stow.dry_run?
-          warn_text("dry-run")
-        elsif stow.restow(repo_path, package)
-          ok
-        else
-          error("failed: #{stow.last_error}")
-        end
       end
 
       def relative_to_target(path)

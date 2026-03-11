@@ -26,7 +26,7 @@ module Dotlayer
       from_env = ENV[@config.profile_env]
       return from_env if from_env && !from_env.empty?
 
-      if @config.profile_detect
+      if @config.profile_detect && !@config.profile_detect.empty?
         output, status = Open3.capture2(@config.profile_detect)
         return output.strip if status.success? && !output.strip.empty?
       end
@@ -44,7 +44,7 @@ module Dotlayer
 
     def command_detected?(entry)
       cmd = entry["detect"]
-      return false unless cmd
+      return false unless cmd.is_a?(String) && !cmd.empty?
 
       _, status = Open3.capture2e("sh", "-c", cmd)
       status.success?

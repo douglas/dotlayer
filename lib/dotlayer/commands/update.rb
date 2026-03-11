@@ -53,22 +53,11 @@ module Dotlayer
         heading "Re-stowing packages"
 
         packages.each do |repo_path, package|
-          restow_package(stow, repo_path, package)
+          restow_package(stow, repo_path, package, verb: "Restowing")
         end
 
         puts
         puts "Done! #{packages.size} package(s) restowed."
-      end
-
-      def restow_package(stow, repo_path, package)
-        print "  Restowing #{green(package)}... "
-        if stow.dry_run?
-          warn_text("dry-run")
-        elsif stow.restow(repo_path, package)
-          ok
-        else
-          error("failed: #{stow.last_error}")
-        end
       end
     end
   end

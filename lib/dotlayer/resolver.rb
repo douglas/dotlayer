@@ -12,7 +12,7 @@ module Dotlayer
         next unless Dir.exist?(repo.path)
 
         base_packages = repo.packages || @config.packages
-        packages.concat(resolve_repo(repo.path, base_packages))
+        packages.concat(resolve_repo(repo, base_packages))
       end
 
       packages
@@ -20,13 +20,13 @@ module Dotlayer
 
     private
 
-    def resolve_repo(repo_path, base_packages)
-      has_base_packages = base_packages.any? { |pkg| Dir.exist?(File.join(repo_path, pkg)) }
-
-      if has_base_packages
-        resolve_layered_repo(repo_path, base_packages)
+    def resolve_repo(repo, base_packages)
+      # Repos with explicit packages always use layered resolution,
+      # even if the directories don't exist yet
+      if repo.packages || base_packages.any? { |pkg| Dir.exist?(File.join(repo.path, pkg)) }
+        resolve_layered_repo(repo.path, base_packages)
       else
-        resolve_all_packages(repo_path)
+        resolve_all_packages(repo.path)
       end
     end
 

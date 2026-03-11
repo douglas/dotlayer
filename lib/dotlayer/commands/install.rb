@@ -81,17 +81,6 @@ module Dotlayer
         run_hooks("after_system_files")
       end
 
-      def restow_package(stow, repo_path, package)
-        print "  Stowing #{green(package)}... "
-        if stow.dry_run?
-          warn_text("dry-run")
-        elsif stow.restow(repo_path, package)
-          ok
-        else
-          error("failed: #{stow.last_error}")
-        end
-      end
-
       def run_hooks(name)
         commands = Array(@config.hooks[name])
         return if commands.empty?
