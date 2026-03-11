@@ -1,5 +1,5 @@
 module Dotlayer
-  VERSION = "0.1.0"
+  VERSION = "0.2.0"
 
   autoload :CLI, "dotlayer/cli"
   autoload :Config, "dotlayer/config"
