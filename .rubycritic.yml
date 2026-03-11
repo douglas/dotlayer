@@ -1,0 +1,21 @@
+# Minimum score for a file to be considered acceptable
+minimum_score: 80.0
+
+# Paths to exclude from analysis
+paths:
+  - 'bin/**/*'
+  - 'test/fixtures/**/*'
+
+# Enable/disable specific analyzers (Standard handles style, so no rubocop here)
+analyzers:
+  - flay      # Structural duplication
+  - flog      # ABC complexity
+  - reek      # Code smells
+
+# Format for output
+formats:
+  - console
+  - html
+
+# Branch for comparison mode
+branch: main
