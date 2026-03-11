@@ -150,7 +150,7 @@ class ResolverTest < Minitest::Test
     assert_equal ["config"], packages.select { |r, _| r == @tmpdir }.map(&:last)
 
     private_packages = packages.select { |r, _| r == private_dir }.map(&:last)
-    assert_equal %w[claude mycompany fonts], private_packages
+    assert_equal %w[claude fonts mycompany], private_packages
   ensure
     FileUtils.rm_rf(private_dir)
   end

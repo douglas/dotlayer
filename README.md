@@ -64,7 +64,7 @@ Dotlayer auto-detects four things about your system:
 | **OS** | `RbConfig::CONFIG["host_os"]` | `linux`, `macos` |
 | **Profile** | `hostnamectl chassis` or `$DOTLAYER_PROFILE` | `desktop`, `laptop` |
 | **Distro** | Shell commands from config | `omarchy`, `fedora` |
-| **Group** | Shell commands from config | `mycompany`, `acme` |
+| **Group** | Shell commands from config | `work`, `mycompany` |
 
 It then scans your dotfiles repo for directories matching these tags and stows them in layer order:
 
@@ -124,9 +124,35 @@ Config file is discovered automatically from:
 - `~/.public_dotfiles/dotlayer.yml`
 - `~/.dotfiles/dotlayer.yml`
 
-## Multi-repo support
+## Public and private dotfiles
 
-Dotlayer supports multiple repos. Each repo can have its own base packages:
+Most people have two kinds of config: stuff you can share (shell aliases, editor themes, window manager rules) and stuff you can't (API keys, work credentials, employer-specific tooling). Dotlayer handles this with two repos:
+
+```
+~/.public_dotfiles/     ← shared on GitHub, safe for the world to see
+~/.private_dotfiles/    ← private repo (or not pushed at all)
+```
+
+### Why two repos?
+
+A single dotfiles repo forces a choice: keep it private (lose the benefit of sharing) or keep it public (risk leaking secrets). Two repos solves this cleanly:
+
+- **Public repo** — your shell, editor, git, and desktop config. Push to GitHub, share with the community, clone on any new machine.
+- **Private repo** — work-specific config, API tokens, SSH configs, fonts with restrictive licenses, employer tooling. Keep in a private repo or don't push at all.
+
+Both repos stow into the same target (`~`), so your home directory looks the same regardless of which repo a file came from.
+
+### Setting it up
+
+Create both repos:
+
+```sh
+mkdir -p ~/.public_dotfiles ~/.private_dotfiles
+cd ~/.public_dotfiles && git init
+cd ~/.private_dotfiles && git init
+```
+
+Add the dotlayer config at `~/.config/dotlayer/dotlayer.yml`:
 
 ```yaml
 repos:
@@ -138,9 +164,67 @@ repos:
       - fonts
 ```
 
-Repos without any matching base packages automatically stow all their top-level directories (sorted alphabetically). This is useful for private repos that only contain standalone packages.
+The `private: true` flag tells dotlayer which repo to use when you run `dotlayer adopt --private`.
 
-Repos are processed in order — packages from the first repo are stowed before packages from the second.
+### What goes where?
+
+**Public repo** — uses the standard base packages (`stow`, `bin`, `git`, `zsh`, `config`) with full layering support:
+
+```
+~/.public_dotfiles/
+  config/                       ← shared config (editor, terminal, etc.)
+  config-linux/                 ← Linux-specific overrides
+  config-omarchy/               ← Omarchy distro overrides
+  config-omarchy-desktop/       ← Omarchy + desktop profile
+  git/                          ← git config
+  zsh/                          ← shell config
+  bin/                          ← personal scripts
+  stow/                         ← stow's own config
+```
+
+**Private repo** — can use per-repo packages for layered resolution, plus standalone directories that are all stowed automatically:
+
+```
+~/.private_dotfiles/
+  config/                       ← private config overlays (SSH, API keys)
+  config-mycompany/              ← work-specific config (group layer)
+  fonts/                        ← licensed fonts
+  fonts-linux/                  ← Linux-specific font config
+  claude/                       ← standalone: Claude AI config
+  work/                         ← standalone: work tooling
+  scripts/                      ← standalone: work automation scripts
+```
+
+Directories that match the per-repo base packages (`config`, `fonts`) get full layer resolution. Everything else (`claude`, `work`, `scripts`) is stowed as-is in alphabetical order.
+
+### Adopting files into the right repo
+
+```sh
+# Public config — goes to ~/.public_dotfiles
+dotlayer adopt ~/.config/lazygit config
+
+# Private config — goes to ~/.private_dotfiles
+dotlayer adopt --private ~/.config/lazysql config
+```
+
+### Layer precedence across repos
+
+Repos are processed in order. Public packages are stowed first, then private packages overlay on top. This means:
+
+1. `~/.public_dotfiles/config/` — base config (stowed first)
+2. `~/.public_dotfiles/config-linux/` — OS layer
+3. `~/.public_dotfiles/config-omarchy/` — distro layer
+4. `~/.private_dotfiles/config/` — private overlays (stowed after public)
+5. `~/.private_dotfiles/config-mycompany/` — work group layer
+
+Each layer adds files — they never conflict because different layers use different file paths within the same directory structure.
+
+### Keeping private dotfiles private
+
+Your private repo doesn't need to be pushed anywhere. It works fine as a local-only git repo for tracking changes. If you do want backup:
+
+- Push to a **private GitHub/GitLab repo**
+- Use `dotlayer update` to pull both repos at once — it runs `git pull --rebase` on each repo that has a `.git` directory
 
 ## CLI reference
 
