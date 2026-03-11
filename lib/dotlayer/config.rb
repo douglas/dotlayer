@@ -24,20 +24,20 @@ module Dotlayer
     end
 
     def repos
-      @data.fetch("repos", [{ "path" => "~/.public_dotfiles" }]).filter_map do |entry|
+      @repos ||= @data.fetch("repos", [{ "path" => "~/.public_dotfiles" }]).filter_map do |entry|
         path = entry["path"]&.to_s
         next if path.nil? || path.empty?
 
         Repo.new(
           path: File.expand_path(path),
           private: entry["private"] || false,
-          packages: entry["packages"]
+          packages: entry["packages"]&.freeze
         )
-      end
+      end.freeze
     end
 
     def packages
-      @data.fetch("packages", DEFAULT_PACKAGES)
+      @packages ||= @data.fetch("packages") { DEFAULT_PACKAGES }.freeze
     end
 
     def profile_detect
