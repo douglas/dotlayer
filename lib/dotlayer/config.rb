@@ -1,5 +1,4 @@
 require "yaml"
-require "pathname"
 
 module Dotlayer
   Repo = Data.define(:path, :private, :packages)

@@ -97,8 +97,8 @@ class AdoptTest < Minitest::Test
   def test_skips_nonexistent_source
     missing = File.join(@target, ".config", "nope")
 
-    # Should not raise, just warn and continue
-    run_adopt(paths: [missing])
+    out, _err = capture_io { run_adopt(paths: [missing]) }
+    assert_match(/does not exist/, out)
   end
 
   def test_private_flag_uses_private_repo
