@@ -1,6 +1,8 @@
 require "test_helper"
 
 class AdoptTest < Minitest::Test
+  include TestConfigHelper
+
   def setup
     @tmpdir = Dir.mktmpdir
     @target = File.join(@tmpdir, "home")
@@ -102,7 +104,10 @@ class AdoptTest < Minitest::Test
     FileUtils.mkdir_p(source)
     File.write(File.join(source, "config.toml"), "db_url = secret")
 
-    config = build_config_with_private(private_repo)
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo), build_repo(path: private_repo, private: true)]
+    )
     Dotlayer::Commands::Adopt.new(
       config:, paths: [source], package: "config", private_repo: true
     ).run
@@ -117,30 +122,11 @@ class AdoptTest < Minitest::Test
   private
 
   def run_adopt(paths:, dry_run: false)
-    config = build_config
+    config = stub_config(target: @target, repos: [build_repo(path: @repo)])
     Dotlayer::Commands::Adopt.new(
       config:, paths:, package: "config", dry_run:
     ).run
   rescue Errno::ENOENT
     # stow binary not found on some CI — file moves already happened
-  end
-
-  def build_config
-    config = Dotlayer::Config.new("/nonexistent/dotlayer.yml")
-    target = @target
-    pub_repo = Dotlayer::Repo.new(path: @repo, private: false, packages: nil)
-    config.define_singleton_method(:target) { target }
-    config.define_singleton_method(:repos) { [pub_repo] }
-    config
-  end
-
-  def build_config_with_private(private_repo_path)
-    config = Dotlayer::Config.new("/nonexistent/dotlayer.yml")
-    target = @target
-    pub_repo = Dotlayer::Repo.new(path: @repo, private: false, packages: nil)
-    priv_repo = Dotlayer::Repo.new(path: private_repo_path, private: true, packages: nil)
-    config.define_singleton_method(:target) { target }
-    config.define_singleton_method(:repos) { [pub_repo, priv_repo] }
-    config
   end
 end
