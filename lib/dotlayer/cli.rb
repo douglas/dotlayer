@@ -3,7 +3,7 @@ require "optparse"
 module Dotlayer
   class CLI
     def run(argv = ARGV)
-      if argv.include?("--version")
+      if argv.first == "--version"
         puts "dotlayer #{VERSION}"
         return
       end
