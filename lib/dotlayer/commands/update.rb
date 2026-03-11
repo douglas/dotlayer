@@ -23,17 +23,16 @@ module Dotlayer
         heading "Pulling repos"
 
         @config.repos.each do |repo|
-          path = repo["path"]
-          next unless Dir.exist?(File.join(path, ".git"))
+          next unless Dir.exist?(File.join(repo.path, ".git"))
 
-          print "  #{File.basename(path)}... "
+          print "  #{File.basename(repo.path)}... "
 
           if @dry_run
             warn_text("dry-run")
             next
           end
 
-          output, status = Open3.capture2e("git", "-C", path, "pull", "--rebase")
+          output, status = Open3.capture2e("git", "-C", repo.path, "pull", "--rebase")
           if status.success?
             ok
           else

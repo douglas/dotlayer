@@ -128,20 +128,19 @@ class AdoptTest < Minitest::Test
   def build_config
     config = Dotlayer::Config.new("/nonexistent/dotlayer.yml")
     target = @target
-    repo = @repo
+    pub_repo = Dotlayer::Repo.new(path: @repo, private: false, packages: nil)
     config.define_singleton_method(:target) { target }
-    config.define_singleton_method(:repos) { [{ "path" => repo }] }
+    config.define_singleton_method(:repos) { [pub_repo] }
     config
   end
 
-  def build_config_with_private(private_repo)
+  def build_config_with_private(private_repo_path)
     config = Dotlayer::Config.new("/nonexistent/dotlayer.yml")
     target = @target
-    repo = @repo
+    pub_repo = Dotlayer::Repo.new(path: @repo, private: false, packages: nil)
+    priv_repo = Dotlayer::Repo.new(path: private_repo_path, private: true, packages: nil)
     config.define_singleton_method(:target) { target }
-    config.define_singleton_method(:repos) {
-      [{ "path" => repo }, { "path" => private_repo, "private" => true }]
-    }
+    config.define_singleton_method(:repos) { [pub_repo, priv_repo] }
     config
   end
 end

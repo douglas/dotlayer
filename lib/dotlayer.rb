@@ -6,6 +6,7 @@ module Dotlayer
   autoload :Detection, "dotlayer/detector"
   autoload :Detector, "dotlayer/detector"
   autoload :Output, "dotlayer/output"
+  autoload :Repo, "dotlayer/config"
   autoload :Resolver, "dotlayer/resolver"
   autoload :Stow, "dotlayer/stow"
 

@@ -129,9 +129,8 @@ class ResolverTest < Minitest::Test
     create_dirs_in(private_dir, "config", "config-mycompany", "claude", "fonts")
 
     config = Dotlayer::Config.new("/nonexistent/dotlayer.yml")
-    config.define_singleton_method(:repos) {
-      [{ "path" => private_dir, "packages" => %w[config fonts] }]
-    }
+    repo = Dotlayer::Repo.new(path: private_dir, private: true, packages: %w[config fonts])
+    config.define_singleton_method(:repos) { [repo] }
     config.define_singleton_method(:packages) { %w[stow bin git zsh config] }
 
     detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: ["mycompany"])
@@ -167,9 +166,9 @@ class ResolverTest < Minitest::Test
 
     public_dir = @tmpdir
     config = Dotlayer::Config.new("/nonexistent/dotlayer.yml")
-    config.define_singleton_method(:repos) {
-      [{ "path" => public_dir }, { "path" => private_dir }]
-    }
+    pub_repo = Dotlayer::Repo.new(path: public_dir, private: false, packages: nil)
+    priv_repo = Dotlayer::Repo.new(path: private_dir, private: false, packages: nil)
+    config.define_singleton_method(:repos) { [pub_repo, priv_repo] }
     config.define_singleton_method(:packages) { %w[config] }
 
     # Public repo has base packages, private repo doesn't
@@ -201,7 +200,8 @@ class ResolverTest < Minitest::Test
 
   def config_with_repo(path, packages: nil)
     config = Dotlayer::Config.new("/nonexistent/dotlayer.yml")
-    config.define_singleton_method(:repos) { [{ "path" => path }] }
+    repo = Dotlayer::Repo.new(path: path, private: false, packages: nil)
+    config.define_singleton_method(:repos) { [repo] }
     config.define_singleton_method(:packages) { packages } if packages
     config
   end

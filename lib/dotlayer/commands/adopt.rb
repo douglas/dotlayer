@@ -34,21 +34,20 @@ module Dotlayer
 
       def find_repo
         if @private_repo
-          repo = @config.repos.find { |r| r["private"] }
-          return repo["path"] if repo
+          repo = @config.repos.find(&:private)
+          return repo.path if repo
           abort "Error: no private repo found in config (add private: true to a repo)"
         end
 
         @config.repos.each do |repo|
-          repo_path = repo["path"]
-          next unless repo_path && Dir.exist?(repo_path)
+          next unless Dir.exist?(repo.path)
 
-          pkg_dir = File.join(repo_path, @package)
-          return repo_path if Dir.exist?(pkg_dir)
+          pkg_dir = File.join(repo.path, @package)
+          return repo.path if Dir.exist?(pkg_dir)
         end
 
         # Package doesn't exist yet — use first repo
-        @config.repos.first&.dig("path")
+        @config.repos.first&.path
       end
 
       def adopt_path(source, repo_path)

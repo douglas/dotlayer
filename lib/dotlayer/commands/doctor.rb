@@ -45,13 +45,12 @@ module Dotlayer
 
       def check_repos_exist
         @config.repos.each do |repo|
-          path = repo["path"]
-          print "  Checking repo #{path}... "
-          if Dir.exist?(path)
+          print "  Checking repo #{repo.path}... "
+          if Dir.exist?(repo.path)
             ok "exists"
           else
             error "missing"
-            @issues << "Repo not found: #{path}"
+            @issues << "Repo not found: #{repo.path}"
           end
         end
       end

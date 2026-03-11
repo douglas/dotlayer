@@ -43,7 +43,7 @@ class ConfigTest < Minitest::Test
     repos = config.repos
 
     assert_equal 1, repos.size
-    assert_equal File.expand_path("~/.public_dotfiles"), repos.first["path"]
+    assert_equal File.expand_path("~/.public_dotfiles"), repos.first.path
   end
 
   def test_repos_from_config
@@ -59,8 +59,10 @@ class ConfigTest < Minitest::Test
       config = Dotlayer::Config.new(config_path)
 
       assert_equal 2, config.repos.size
-      assert_equal File.expand_path("~/.dotfiles"), config.repos[0]["path"]
-      assert_equal true, config.repos[1]["private"]
+      assert_equal File.expand_path("~/.dotfiles"), config.repos[0].path
+      assert_equal false, config.repos[0].private
+      assert_equal true, config.repos[1].private
+      assert_nil config.repos[0].packages
     end
   end
 end

@@ -9,11 +9,10 @@ module Dotlayer
       packages = []
 
       @config.repos.each do |repo|
-        repo_path = repo["path"]
-        next unless repo_path && Dir.exist?(repo_path)
+        next unless Dir.exist?(repo.path)
 
-        base_packages = repo["packages"] || @config.packages
-        packages.concat(resolve_repo(repo_path, base_packages))
+        base_packages = repo.packages || @config.packages
+        packages.concat(resolve_repo(repo.path, base_packages))
       end
 
       packages

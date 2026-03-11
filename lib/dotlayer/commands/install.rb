@@ -54,7 +54,7 @@ module Dotlayer
         end
 
         @config.system_files.each do |entry|
-          source = File.expand_path(entry["source"], first_repo["path"])
+          source = File.expand_path(entry["source"], first_repo.path)
           dest = entry["dest"]
           mode = entry["mode"]
 

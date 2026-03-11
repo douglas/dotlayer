@@ -2,6 +2,8 @@ require "yaml"
 require "pathname"
 
 module Dotlayer
+  Repo = Data.define(:path, :private, :packages)
+
   class Config
     DEFAULT_PACKAGES = %w[stow bin git zsh config].freeze
     DEFAULT_CONFIG_PATHS = %w[
@@ -22,11 +24,15 @@ module Dotlayer
     end
 
     def repos
-      @data.fetch("repos", [{ "path" => "~/.public_dotfiles" }]).filter_map do |repo|
-        path = repo["path"]
+      @data.fetch("repos", [{ "path" => "~/.public_dotfiles" }]).filter_map do |entry|
+        path = entry["path"]
         next if path.nil? || path.empty?
 
-        repo.merge("path" => File.expand_path(path))
+        Repo.new(
+          path: File.expand_path(path),
+          private: entry["private"] || false,
+          packages: entry["packages"]
+        )
       end
     end
 
