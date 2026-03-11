@@ -100,7 +100,9 @@ module Dotlayer
         .reject { |d| d.start_with?(".") }
     end
 
-    # Returns true if dir looks like a layer variant of any base package
+    # Returns true if dir looks like a layer variant of any base package.
+    # By convention, any <base>-<suffix> directory is a layer variant
+    # for another OS, distro, profile, or group.
     def layer_variant?(dir, base_packages)
       base_packages.any? { |pkg| dir.start_with?("#{pkg}-") }
     end

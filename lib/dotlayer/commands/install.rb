@@ -34,11 +34,27 @@ module Dotlayer
       def install_system_files
         return if @config.system_files.empty?
 
+        first_repo = @config.repos.first
+        unless first_repo
+          warn_text "  Skipping system files: no repos configured"
+          return
+        end
+
         puts
         heading "System files"
 
+        unless @dry_run
+          puts "  The following files will be installed with sudo:"
+          @config.system_files.each { |e| puts "    #{e["dest"]}" }
+          print "  Continue? [y/N] "
+          unless $stdin.gets&.strip&.downcase == "y"
+            warn_text("  Skipped.")
+            return
+          end
+        end
+
         @config.system_files.each do |entry|
-          source = File.expand_path(entry["source"], @config.repos.first["path"])
+          source = File.expand_path(entry["source"], first_repo["path"])
           dest = entry["dest"]
           mode = entry["mode"]
 
@@ -66,11 +82,21 @@ module Dotlayer
       end
 
       def run_hooks(name)
-        commands = @config.hooks[name]
-        return unless commands
+        commands = Array(@config.hooks[name])
+        return if commands.empty?
 
         puts
         heading "Running #{name} hooks"
+
+        unless @dry_run
+          puts "  The following commands will be executed:"
+          commands.each { |cmd| puts "    #{cmd}" }
+          print "  Continue? [y/N] "
+          unless $stdin.gets&.strip&.downcase == "y"
+            warn_text("  Skipped.")
+            return
+          end
+        end
 
         commands.each do |cmd|
           print "  #{cmd}... "

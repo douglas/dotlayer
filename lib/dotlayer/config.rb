@@ -22,8 +22,11 @@ module Dotlayer
     end
 
     def repos
-      @data.fetch("repos", [{ "path" => "~/.public_dotfiles" }]).map do |repo|
-        repo.merge("path" => File.expand_path(repo["path"]))
+      @data.fetch("repos", [{ "path" => "~/.public_dotfiles" }]).filter_map do |repo|
+        path = repo["path"]
+        next if path.nil? || path.empty?
+
+        repo.merge("path" => File.expand_path(path))
       end
     end
 
@@ -60,7 +63,10 @@ module Dotlayer
     def load_config
       return {} unless @path && File.exist?(@path)
 
-      YAML.load_file(@path) || {}
+      data = YAML.safe_load_file(@path, permitted_classes: [Symbol]) || {}
+      return data if data.is_a?(Hash)
+
+      abort "Error: #{@path} must contain a YAML mapping, got #{data.class}"
     rescue Psych::SyntaxError => e
       abort "Error: invalid YAML in #{@path}: #{e.message}"
     end

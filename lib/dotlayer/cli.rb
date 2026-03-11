@@ -3,6 +3,11 @@ require "optparse"
 module Dotlayer
   class CLI
     def run(argv = ARGV)
+      if argv.include?("--version")
+        puts "dotlayer #{VERSION}"
+        return
+      end
+
       options = parse_global_options(argv)
       command = argv.shift
       config = Config.new(options[:config])
@@ -13,7 +18,7 @@ module Dotlayer
       when "update"  then Commands::Update.new(config:, dry_run: options[:dry_run], verbose: options[:verbose]).run
       when "doctor"  then Commands::Doctor.new(config:).run
       when "adopt"   then run_adopt(config:, argv:, options:)
-      when "version", "--version", "-v"
+      when "version", "--version"
         puts "dotlayer #{VERSION}"
       else
         print_usage
