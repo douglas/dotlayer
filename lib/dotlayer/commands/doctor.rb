@@ -70,9 +70,10 @@ module Dotlayer
         if broken.empty?
           ok "none"
         else
-          warn_text "#{broken.size} found"
+          warning "#{broken.size} found"
           broken.each do |link|
-            @issues << "Broken symlink: #{link} -> #{File.readlink(link)}"
+            target = File.readlink(link) rescue "(deleted)"
+            @issues << "Broken symlink: #{link} -> #{target}"
           end
         end
       end
