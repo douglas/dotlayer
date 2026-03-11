@@ -302,6 +302,13 @@ test/
 
 **Philosophy:** Tests cover project behavior only — never Ruby language features. See the `minitest-style` Claude skill for the full rationale and anti-pattern list.
 
+## Dev tooling
+
+- **[Standard](https://github.com/standardrb/standard)** — zero-config linter (wraps RuboCop). `bundle exec standardrb`
+- **[RubyCritic](https://github.com/whitesmith/rubycritic)** — code quality analysis combining Flay (duplication), Flog (complexity), and Reek (code smells). `bundle exec rubycritic lib/`. Configuration in `.rubycritic.yml`.
+
+`rake` default task runs tests then auto-fixes Standard violations.
+
 ## Future work
 
 - `Commands::Init` — scaffold a new dotlayer repo with example packages and config

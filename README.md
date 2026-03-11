@@ -266,6 +266,16 @@ dotlayer adopt --dry-run ~/.config/lazygit config
 
 The last argument is always the package name. Dotlayer finds the first repo containing that package, or falls back to the first repo for new packages.
 
+## Development
+
+```sh
+bundle exec rake test          # run tests
+bundle exec standardrb         # lint
+bundle exec rubycritic lib/    # code quality report
+```
+
+See [Contributing](CONTRIBUTING.md) for full setup, testing, and contribution guidelines.
+
 ## Documentation
 
 - [Architecture](docs/architecture.md) — system design, data flow, and class responsibilities

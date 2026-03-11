@@ -28,7 +28,7 @@ Install gems:
 bundle install
 ```
 
-Dotlayer has **zero runtime dependencies** — everything uses Ruby stdlib. Dev dependencies are `minitest`, `rake`, and `standard` (linter).
+Dotlayer has **zero runtime dependencies** — everything uses Ruby stdlib. Dev dependencies are `minitest`, `rake`, `standard` (linter), and `rubycritic` (code quality).
 
 ## Running tests
 
@@ -63,6 +63,14 @@ bundle exec standardrb --fix
 ```
 
 We use [Standard](https://github.com/standardrb/standard) (based on RuboCop) with zero configuration. Run it before committing.
+
+## Code quality
+
+```sh
+bundle exec rubycritic lib/
+```
+
+[RubyCritic](https://github.com/whitesmith/rubycritic) combines Flay (duplication), Flog (complexity), and Reek (code smells) into a single report with per-file scores (A–F). Configuration lives in `.rubycritic.yml`.
 
 ### Test suite overview
 
@@ -179,7 +187,7 @@ Detection happens in `Detector`. Distro and group detection is config-driven —
 ```sh
 # Update VERSION in lib/dotlayer.rb
 # Commit and tag
-git tag v0.2.1
+git tag v0.2.2
 gem build dotlayer.gemspec
-gem push dotlayer-0.2.1.gem
+gem push dotlayer-0.2.2.gem
 ```
