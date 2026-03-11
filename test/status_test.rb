@@ -29,6 +29,48 @@ class StatusTest < Minitest::Test
     FileUtils.rm_rf(tmpdir)
   end
 
+  def test_zero_packages_shows_zero_count
+    config = stub_config(
+      repos: [build_repo(path: "/nonexistent/repo")],
+      packages: %w[config]
+    )
+    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
+    detector = Object.new
+    detector.define_singleton_method(:detect) { detection }
+
+    output = capture_io {
+      Dotlayer::Commands::Status.new(config:, detector:).run
+    }.first
+
+    assert_match(/0 package/, output)
+  end
+
+  def test_multi_repo_shows_repo_names
+    tmpdir1 = Dir.mktmpdir
+    tmpdir2 = Dir.mktmpdir
+    FileUtils.mkdir_p(File.join(tmpdir1, "config"))
+    FileUtils.mkdir_p(File.join(tmpdir2, "fonts"))
+
+    config = stub_config(
+      repos: [build_repo(path: tmpdir1), build_repo(path: tmpdir2)],
+      packages: %w[config]
+    )
+    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
+    detector = Object.new
+    detector.define_singleton_method(:detect) { detection }
+
+    output = capture_io {
+      Dotlayer::Commands::Status.new(config:, detector:).run
+    }.first
+
+    assert_match(/#{File.basename(tmpdir1)}/, output)
+    assert_match(/#{File.basename(tmpdir2)}/, output)
+    assert_match(/2 package/, output)
+  ensure
+    FileUtils.rm_rf(tmpdir1)
+    FileUtils.rm_rf(tmpdir2)
+  end
+
   def test_prints_none_when_no_distros_or_groups
     tmpdir = Dir.mktmpdir
     FileUtils.mkdir_p(File.join(tmpdir, "config"))

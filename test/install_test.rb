@@ -74,4 +74,163 @@ class InstallTest < Minitest::Test
 
     assert_match(/Skipping system files/, output)
   end
+
+  def test_system_files_dry_run_prints_dry_run
+    system_file = File.join(@repo, "config", "etc", "test.conf")
+    FileUtils.mkdir_p(File.dirname(system_file))
+    File.write(system_file, "content")
+
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo)],
+      packages: %w[config],
+      system_files: [{ "source" => "config/etc/test.conf", "dest" => "/tmp/test.conf" }],
+      hooks: {}
+    )
+    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
+    detector = Object.new
+    detector.define_singleton_method(:detect) { detection }
+
+    output = capture_io {
+      Dotlayer::Commands::Install.new(config:, detector:, dry_run: true).run
+    }.first
+
+    assert_match(/System files/, output)
+    assert_match(/dry-run/, output)
+    refute File.exist?("/tmp/test.conf")
+  end
+
+  def test_system_files_stdin_reject_skips
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo)],
+      packages: %w[config],
+      system_files: [{ "source" => "config/etc/test.conf", "dest" => "/tmp/test.conf" }],
+      hooks: {}
+    )
+    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
+    detector = Object.new
+    detector.define_singleton_method(:detect) { detection }
+
+    original_stdin = $stdin
+    $stdin = StringIO.new("n\n")
+    output = capture_io {
+      Dotlayer::Commands::Install.new(config:, detector:).run
+    }.first
+    $stdin = original_stdin
+
+    assert_match(/Skipped/, output)
+  ensure
+    $stdin = original_stdin
+  end
+
+  def test_macos_skips_system_files
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo)],
+      packages: %w[config],
+      system_files: [{ "source" => "foo", "dest" => "/tmp/bar" }],
+      hooks: {}
+    )
+    detection = Dotlayer::Detection.new(os: "macos", profile: "desktop", distros: [], groups: [])
+    detector = Object.new
+    detector.define_singleton_method(:detect) { detection }
+
+    output = capture_io {
+      Dotlayer::Commands::Install.new(config:, detector:).run
+    }.first
+
+    refute_match(/System files/, output)
+  end
+
+  def test_hooks_dry_run_prints_dry_run
+    system_file = File.join(@repo, "config", "etc", "test.conf")
+    FileUtils.mkdir_p(File.dirname(system_file))
+    File.write(system_file, "content")
+
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo)],
+      packages: %w[config],
+      system_files: [{ "source" => "config/etc/test.conf", "dest" => "/tmp/dotlayer_hook_test" }],
+      hooks: { "after_system_files" => ["echo hook_ran"] }
+    )
+    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
+    detector = Object.new
+    detector.define_singleton_method(:detect) { detection }
+
+    output = capture_io {
+      Dotlayer::Commands::Install.new(config:, detector:, dry_run: true).run
+    }.first
+
+    assert_match(/after_system_files hooks/, output)
+    assert_match(/echo hook_ran.*dry-run/, output)
+  end
+
+  def test_hooks_stdin_reject_skips
+    system_file = File.join(@repo, "config", "etc", "test.conf")
+    FileUtils.mkdir_p(File.dirname(system_file))
+    File.write(system_file, "content")
+
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo)],
+      packages: %w[config],
+      system_files: [{ "source" => "config/etc/test.conf", "dest" => "/tmp/dotlayer_hook_test" }],
+      hooks: { "after_system_files" => ["echo hook_ran"] }
+    )
+    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
+    detector = Object.new
+    detector.define_singleton_method(:detect) { detection }
+
+    # First "y" accepts system files install, second "n" rejects hooks
+    original_stdin = $stdin
+    $stdin = StringIO.new("y\nn\n")
+    output = capture_io {
+      # stub system() to avoid actual sudo
+      install = Dotlayer::Commands::Install.new(config:, detector:)
+      install.define_singleton_method(:system) { |*_args| true }
+      install.run
+    }.first
+    $stdin = original_stdin
+
+    assert_match(/after_system_files hooks/, output)
+    assert_match(/Skipped/, output)
+  ensure
+    $stdin = original_stdin
+  end
+
+  def test_hooks_stdin_accept_runs_hooks
+    system_file = File.join(@repo, "config", "etc", "test.conf")
+    FileUtils.mkdir_p(File.dirname(system_file))
+    File.write(system_file, "content")
+
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo)],
+      packages: %w[config],
+      system_files: [{ "source" => "config/etc/test.conf", "dest" => "/tmp/dotlayer_hook_test" }],
+      hooks: { "after_system_files" => ["echo hook_ran"] }
+    )
+    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
+    detector = Object.new
+    detector.define_singleton_method(:detect) { detection }
+
+    # "y" accepts system files, "y" accepts hooks
+    original_stdin = $stdin
+    $stdin = StringIO.new("y\ny\n")
+    commands_run = []
+    output = capture_io {
+      install = Dotlayer::Commands::Install.new(config:, detector:)
+      install.define_singleton_method(:system) { |*args| commands_run << args; true }
+      install.run
+    }.first
+    $stdin = original_stdin
+
+    assert_match(/echo hook_ran/, output)
+    assert_match(/ok/, output)
+    assert commands_run.any? { |args| args == ["echo hook_ran"] }, "hook command should have been executed"
+  ensure
+    $stdin = original_stdin
+  end
 end

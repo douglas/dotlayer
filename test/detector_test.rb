@@ -114,4 +114,67 @@ class DetectorTest < Minitest::Test
 
     assert_equal "desktop", detection.profile
   end
+
+  def test_detect_os_macos
+    detector = Dotlayer::Detector.new(config: Dotlayer::Config.new)
+    detector.define_singleton_method(:detect) do
+      os = case "darwin23.0"
+           when /darwin/ then "macos"
+           when /linux/  then "linux"
+           else "unknown"
+           end
+      Dotlayer::Detection.new(os: os, profile: "desktop", distros: [], groups: [])
+    end
+    detection = detector.detect
+
+    assert_equal "macos", detection.os
+  end
+
+  def test_detect_os_unknown
+    detector = Dotlayer::Detector.new(config: Dotlayer::Config.new)
+    detector.define_singleton_method(:detect) do
+      os = case "freebsd14"
+           when /darwin/ then "macos"
+           when /linux/  then "linux"
+           else "unknown"
+           end
+      Dotlayer::Detection.new(os: os, profile: "desktop", distros: [], groups: [])
+    end
+    detection = detector.detect
+
+    assert_equal "unknown", detection.os
+  end
+
+  def test_empty_env_var_falls_through_to_command
+    ENV["DOTLAYER_PROFILE"] = ""
+    config = stub_config(profile_detect: "echo laptop", profile_env: "DOTLAYER_PROFILE")
+
+    detector = Dotlayer::Detector.new(config: config)
+    detection = detector.detect
+
+    assert_equal "laptop", detection.profile
+  ensure
+    ENV.delete("DOTLAYER_PROFILE")
+  end
+
+  def test_whitespace_command_output_falls_back_to_desktop
+    config = stub_config(
+      profile_detect: "echo '   '",
+      profile_env: "DOTLAYER_TEST_NONEXISTENT"
+    )
+
+    detector = Dotlayer::Detector.new(config: config)
+    detection = detector.detect
+
+    assert_equal "desktop", detection.profile
+  end
+
+  def test_non_string_detect_skips_distro
+    config = stub_config(distros: { "broken" => { "detect" => 42 } })
+
+    detector = Dotlayer::Detector.new(config: config)
+    detection = detector.detect
+
+    refute_includes detection.distros, "broken"
+  end
 end

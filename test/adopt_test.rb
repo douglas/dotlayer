@@ -141,6 +141,21 @@ class AdoptTest < Minitest::Test
     end
   end
 
+  def test_empty_repos_aborts
+    source = File.join(@target, ".config", "test")
+    FileUtils.mkdir_p(source)
+
+    config = stub_config(target: @target, repos: [])
+
+    assert_raises(SystemExit) do
+      capture_io do
+        Dotlayer::Commands::Adopt.new(
+          config:, paths: [source], package: "config"
+        ).run
+      end
+    end
+  end
+
   def test_fallback_to_first_repo_for_new_package
     source = File.join(@target, ".config", "lazygit")
     FileUtils.mkdir_p(source)

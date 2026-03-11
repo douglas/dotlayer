@@ -59,4 +59,50 @@ class UpdateTest < Minitest::Test
     # Should not mention repo name in pull section (skipped)
     refute_match(/plain/, output)
   end
+
+  def test_live_update_stows_packages
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo)],
+      packages: %w[config]
+    )
+    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
+    detector = Object.new
+    detector.define_singleton_method(:detect) { detection }
+
+    output = capture_io {
+      Dotlayer::Commands::Update.new(config:, detector:).run
+    }.first
+
+    assert_match(/Restowing.*config/, output)
+    assert_match(/1 package/, output)
+    # Stow should have created symlinks
+    config_dir = File.join(@target, ".config")
+    assert File.symlink?(config_dir) || File.symlink?(File.join(config_dir, "test")),
+      "stow should create symlinks after update"
+  end
+
+  def test_pull_failure_shows_error
+    # Create a repo with a remote that will fail to pull
+    remote = File.join(@tmpdir, "remote")
+    FileUtils.cp_r(@repo, remote)
+    # Remove the remote's .git to make pull fail
+    local = @repo
+    system("git", "-C", local, "remote", "add", "origin", "/nonexistent/remote", out: File::NULL, err: File::NULL)
+
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: local)],
+      packages: %w[config]
+    )
+    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
+    detector = Object.new
+    detector.define_singleton_method(:detect) { detection }
+
+    output, err = capture_io {
+      Dotlayer::Commands::Update.new(config:, detector:).run
+    }
+
+    assert_match(/failed/, output)
+  end
 end

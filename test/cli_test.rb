@@ -26,4 +26,44 @@ class CLITest < Minitest::Test
       capture_io { Dotlayer::CLI.new.run(["adopt"]) }
     end
   end
+
+  def test_adopt_with_only_package_aborts
+    assert_raises(SystemExit) do
+      capture_io { Dotlayer::CLI.new.run(["adopt", "config"]) }
+    end
+  end
+
+  def test_status_routes_without_error
+    output = capture_io {
+      Dotlayer::CLI.new.run(["-c", "/nonexistent/dotlayer.yml", "status"])
+    }.first
+
+    assert_match(/OS:/, output)
+    assert_match(/Profile:/, output)
+  end
+
+  def test_doctor_routes_without_error
+    output = capture_io {
+      Dotlayer::CLI.new.run(["-c", "/nonexistent/dotlayer.yml", "doctor"])
+    }.first
+
+    assert_match(/Doctor/, output)
+  end
+
+  def test_config_flag_is_forwarded
+    # Using a nonexistent config path should still work (returns defaults)
+    output = capture_io {
+      Dotlayer::CLI.new.run(["-c", "/nonexistent/custom.yml", "status"])
+    }.first
+
+    assert_match(/OS:/, output)
+  end
+
+  def test_dry_run_flag_forwarded_to_install
+    output = capture_io {
+      Dotlayer::CLI.new.run(["-c", "/nonexistent/dotlayer.yml", "-n", "install"])
+    }.first
+
+    assert_match(/dry-run/, output)
+  end
 end

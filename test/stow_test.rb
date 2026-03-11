@@ -52,6 +52,22 @@ class StowTest < Minitest::Test
     assert_nil stow.last_error
   end
 
+  def test_verbose_prints_command_to_stderr
+    stow = Dotlayer::Stow.new(target: @target, verbose: true)
+
+    _, err = capture_io { stow.restow(@repo, "pkg") }
+
+    assert_match(/stow -R -v/, err)
+  end
+
+  def test_dry_run_prints_command_to_stderr
+    stow = Dotlayer::Stow.new(target: @target, dry_run: true)
+
+    _, err = capture_io { stow.restow(@repo, "pkg") }
+
+    assert_match(/stow -R/, err)
+  end
+
   def test_missing_stow_binary_sets_error
     stow = Dotlayer::Stow.new(target: @target)
 

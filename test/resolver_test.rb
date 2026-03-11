@@ -168,6 +168,58 @@ class ResolverTest < Minitest::Test
     FileUtils.rm_rf(private_dir)
   end
 
+  def test_single_repo_no_matching_base_dirs_stows_all
+    create_dirs("claude", "fonts", "zed")
+    config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[stow bin git])
+    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
+
+    packages = resolve(config, detection)
+
+    assert_equal %w[claude fonts zed], packages
+  end
+
+  def test_layer_variant_does_not_match_prefix_substring
+    create_dirs("config", "configure", "config-linux")
+    config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])
+    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
+
+    packages = resolve(config, detection)
+
+    assert_includes packages, "config"
+    assert_includes packages, "config-linux"
+    assert_includes packages, "configure"
+  end
+
+  def test_cross_repo_ordering_preserves_repo_order
+    repo1 = Dir.mktmpdir
+    repo2 = Dir.mktmpdir
+    create_dirs_in(repo1, "config", "bin")
+    create_dirs_in(repo2, "fonts", "claude")
+
+    config = stub_config(
+      repos: [build_repo(path: repo1), build_repo(path: repo2)],
+      packages: %w[config bin]
+    )
+    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
+
+    resolver = Dotlayer::Resolver.new(config: config, detection: detection)
+    all_packages = resolver.resolve
+
+    repo1_pkgs = all_packages.select { |r, _| r == repo1 }.map(&:last)
+    repo2_pkgs = all_packages.select { |r, _| r == repo2 }.map(&:last)
+
+    # repo1 packages come before repo2 packages
+    last_repo1_idx = all_packages.rindex { |r, _| r == repo1 }
+    first_repo2_idx = all_packages.index { |r, _| r == repo2 }
+    assert last_repo1_idx < first_repo2_idx, "repo1 packages should come before repo2"
+
+    assert_equal %w[config bin], repo1_pkgs
+    assert_equal %w[claude fonts], repo2_pkgs
+  ensure
+    FileUtils.rm_rf(repo1)
+    FileUtils.rm_rf(repo2)
+  end
+
   def test_skips_hidden_directories
     create_dirs("config", ".git", ".github")
     config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])

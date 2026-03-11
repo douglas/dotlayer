@@ -9,6 +9,8 @@ class ConfigTest < Minitest::Test
     assert_equal "hostnamectl chassis", config.profile_detect
     assert_equal "DOTLAYER_PROFILE", config.profile_env
     assert_equal({}, config.distros)
+    assert_equal({}, config.groups)
+    assert_equal({}, config.hooks)
     assert_equal [], config.system_files
   end
 
@@ -115,6 +117,41 @@ class ConfigTest < Minitest::Test
       config = Dotlayer::Config.new(config_path)
 
       assert_equal({ "after_system_files" => ["echo done"] }, config.hooks)
+    end
+  end
+
+  def test_repos_with_per_repo_packages
+    Dir.mktmpdir do |dir|
+      config_path = File.join(dir, "dotlayer.yml")
+      File.write(config_path, <<~YAML)
+        repos:
+          - path: ~/.dotfiles
+            packages:
+              - config
+              - fonts
+      YAML
+
+      config = Dotlayer::Config.new(config_path)
+
+      assert_equal %w[config fonts], config.repos[0].packages
+    end
+  end
+
+  def test_system_files_from_config
+    Dir.mktmpdir do |dir|
+      config_path = File.join(dir, "dotlayer.yml")
+      File.write(config_path, <<~YAML)
+        system_files:
+          - source: config-linux/etc/udev/rules.d/70-keychron.rules
+            dest: /etc/udev/rules.d/70-keychron.rules
+            mode: "0644"
+      YAML
+
+      config = Dotlayer::Config.new(config_path)
+
+      assert_equal 1, config.system_files.size
+      assert_equal "/etc/udev/rules.d/70-keychron.rules", config.system_files[0]["dest"]
+      assert_equal "0644", config.system_files[0]["mode"]
     end
   end
 
