@@ -1,3 +1,5 @@
+require "set"
+
 module Dotlayer
   class Resolver
     def initialize(config:, detection:)
