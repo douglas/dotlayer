@@ -16,7 +16,7 @@ class StowTest < Minitest::Test
   def test_dry_run_does_not_create_symlinks
     stow = Dotlayer::Stow.new(target: @target, dry_run: true)
 
-    assert stow.dry_run?
+    assert_predicate stow, :dry_run?
     assert stow.restow(@repo, "pkg")
     refute File.exist?(File.join(@target, ".config", "test"))
   end

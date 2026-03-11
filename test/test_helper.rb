@@ -20,4 +20,14 @@ module TestConfigHelper
   def build_repo(path:, private: false, packages: nil)
     Dotlayer::Repo.new(path: path, private: private, packages: packages)
   end
+
+  def build_detection(os: "linux", profile: "desktop", distros: [], groups: [])
+    Dotlayer::Detection.new(os:, profile:, distros:, groups:)
+  end
+
+  def stub_detector(detection = build_detection)
+    detector = Object.new
+    detector.define_singleton_method(:detect) { detection }
+    detector
+  end
 end

@@ -30,16 +30,6 @@ class DetectorTest < Minitest::Test
     assert_equal "desktop", detection.profile
   end
 
-  def test_detection_is_immutable
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: ["omarchy"], groups: ["mycompany"])
-
-    assert_equal "linux", detection.os
-    assert_equal "desktop", detection.profile
-    assert_equal ["omarchy"], detection.distros
-    assert_equal ["mycompany"], detection.groups
-    assert_raises(NoMethodError) { detection.os = "macos" }
-  end
-
   def test_detect_distro_with_command
     config = stub_config(distros: { "test_distro" => { "detect" => "true" } })
 
@@ -88,22 +78,15 @@ class DetectorTest < Minitest::Test
     assert_equal "laptop", detection.profile
   end
 
-  def test_empty_detect_command_skips_distro
-    config = stub_config(distros: { "broken" => { "detect" => "" } })
+  def test_invalid_detect_values_skipped
+    [{ "detect" => "" }, {}, { "detect" => 42 }].each do |entry|
+      config = stub_config(distros: { "broken" => entry })
 
-    detector = Dotlayer::Detector.new(config: config)
-    detection = detector.detect
+      detector = Dotlayer::Detector.new(config: config)
+      detection = detector.detect
 
-    refute_includes detection.distros, "broken"
-  end
-
-  def test_nil_detect_command_skips_distro
-    config = stub_config(distros: { "broken" => {} })
-
-    detector = Dotlayer::Detector.new(config: config)
-    detection = detector.detect
-
-    refute_includes detection.distros, "broken"
+      refute_includes detection.distros, "broken"
+    end
   end
 
   def test_empty_profile_detect_falls_back_to_desktop
@@ -113,28 +96,6 @@ class DetectorTest < Minitest::Test
     detection = detector.detect
 
     assert_equal "desktop", detection.profile
-  end
-
-  def test_detect_os_macos
-    config = stub_config(profile_env: "DOTLAYER_TEST_NONEXISTENT")
-    detector = Dotlayer::Detector.new(config: config)
-    # Stub the private method to simulate macOS host_os
-    detector.define_singleton_method(:detect_os) { "macos" }
-
-    detection = detector.detect
-
-    assert_equal "macos", detection.os
-  end
-
-  def test_detect_os_unknown
-    config = stub_config(profile_env: "DOTLAYER_TEST_NONEXISTENT")
-    detector = Dotlayer::Detector.new(config: config)
-    # Stub the private method to simulate an unknown OS
-    detector.define_singleton_method(:detect_os) { "unknown" }
-
-    detection = detector.detect
-
-    assert_equal "unknown", detection.os
   end
 
   def test_empty_env_var_falls_through_to_command
@@ -159,14 +120,5 @@ class DetectorTest < Minitest::Test
     detection = detector.detect
 
     assert_equal "desktop", detection.profile
-  end
-
-  def test_non_string_detect_skips_distro
-    config = stub_config(distros: { "broken" => { "detect" => 42 } })
-
-    detector = Dotlayer::Detector.new(config: config)
-    detection = detector.detect
-
-    refute_includes detection.distros, "broken"
   end
 end

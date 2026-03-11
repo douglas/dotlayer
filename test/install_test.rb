@@ -21,12 +21,9 @@ class InstallTest < Minitest::Test
       repos: [build_repo(path: @repo)],
       packages: %w[config]
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
-    detector = Object.new
-    detector.define_singleton_method(:detect) { detection }
 
     output = capture_io {
-      Dotlayer::Commands::Install.new(config:, detector:, dry_run: true).run
+      Dotlayer::Commands::Install.new(config:, detector: stub_detector, dry_run: true).run
     }.first
 
     assert_match(/dry-run/, output)
@@ -40,12 +37,9 @@ class InstallTest < Minitest::Test
       repos: [build_repo(path: @repo)],
       packages: %w[config]
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
-    detector = Object.new
-    detector.define_singleton_method(:detect) { detection }
 
     output = capture_io {
-      Dotlayer::Commands::Install.new(config:, detector:).run
+      Dotlayer::Commands::Install.new(config:, detector: stub_detector).run
     }.first
 
     assert_match(/Stowing.*config/, output)
@@ -64,12 +58,9 @@ class InstallTest < Minitest::Test
       packages: %w[config],
       system_files: [{ "source" => "foo", "dest" => "/tmp/bar" }]
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
-    detector = Object.new
-    detector.define_singleton_method(:detect) { detection }
 
     output = capture_io {
-      Dotlayer::Commands::Install.new(config:, detector:).run
+      Dotlayer::Commands::Install.new(config:, detector: stub_detector).run
     }.first
 
     assert_match(/Skipping system files/, output)
@@ -87,12 +78,9 @@ class InstallTest < Minitest::Test
       system_files: [{ "source" => "config/etc/test.conf", "dest" => "/tmp/test.conf" }],
       hooks: {}
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
-    detector = Object.new
-    detector.define_singleton_method(:detect) { detection }
 
     output = capture_io {
-      Dotlayer::Commands::Install.new(config:, detector:, dry_run: true).run
+      Dotlayer::Commands::Install.new(config:, detector: stub_detector, dry_run: true).run
     }.first
 
     assert_match(/System files/, output)
@@ -108,14 +96,11 @@ class InstallTest < Minitest::Test
       system_files: [{ "source" => "config/etc/test.conf", "dest" => "/tmp/test.conf" }],
       hooks: {}
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
-    detector = Object.new
-    detector.define_singleton_method(:detect) { detection }
 
     original_stdin = $stdin
     $stdin = StringIO.new("n\n")
     output = capture_io {
-      Dotlayer::Commands::Install.new(config:, detector:).run
+      Dotlayer::Commands::Install.new(config:, detector: stub_detector).run
     }.first
     $stdin = original_stdin
 
@@ -132,12 +117,10 @@ class InstallTest < Minitest::Test
       system_files: [{ "source" => "foo", "dest" => "/tmp/bar" }],
       hooks: {}
     )
-    detection = Dotlayer::Detection.new(os: "macos", profile: "desktop", distros: [], groups: [])
-    detector = Object.new
-    detector.define_singleton_method(:detect) { detection }
+    detection = build_detection(os: "macos")
 
     output = capture_io {
-      Dotlayer::Commands::Install.new(config:, detector:).run
+      Dotlayer::Commands::Install.new(config:, detector: stub_detector(detection)).run
     }.first
 
     refute_match(/System files/, output)
@@ -155,12 +138,9 @@ class InstallTest < Minitest::Test
       system_files: [{ "source" => "config/etc/test.conf", "dest" => "/tmp/dotlayer_hook_test" }],
       hooks: { "after_system_files" => ["echo hook_ran"] }
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
-    detector = Object.new
-    detector.define_singleton_method(:detect) { detection }
 
     output = capture_io {
-      Dotlayer::Commands::Install.new(config:, detector:, dry_run: true).run
+      Dotlayer::Commands::Install.new(config:, detector: stub_detector, dry_run: true).run
     }.first
 
     assert_match(/after_system_files hooks/, output)
@@ -179,16 +159,13 @@ class InstallTest < Minitest::Test
       system_files: [{ "source" => "config/etc/test.conf", "dest" => "/tmp/dotlayer_hook_test" }],
       hooks: { "after_system_files" => ["echo hook_ran"] }
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
-    detector = Object.new
-    detector.define_singleton_method(:detect) { detection }
 
     # First "y" accepts system files install, second "n" rejects hooks
     original_stdin = $stdin
     $stdin = StringIO.new("y\nn\n")
     output = capture_io {
       # stub system() to avoid actual sudo
-      install = Dotlayer::Commands::Install.new(config:, detector:)
+      install = Dotlayer::Commands::Install.new(config:, detector: stub_detector)
       install.define_singleton_method(:system) { |*_args| true }
       install.run
     }.first
@@ -212,16 +189,13 @@ class InstallTest < Minitest::Test
       system_files: [{ "source" => "config/etc/test.conf", "dest" => "/tmp/dotlayer_hook_test" }],
       hooks: { "after_system_files" => ["echo hook_ran"] }
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
-    detector = Object.new
-    detector.define_singleton_method(:detect) { detection }
 
     # "y" accepts system files, "y" accepts hooks
     original_stdin = $stdin
     $stdin = StringIO.new("y\ny\n")
     commands_run = []
     output = capture_io {
-      install = Dotlayer::Commands::Install.new(config:, detector:)
+      install = Dotlayer::Commands::Install.new(config:, detector: stub_detector)
       install.define_singleton_method(:system) { |*args| commands_run << args; true }
       install.run
     }.first

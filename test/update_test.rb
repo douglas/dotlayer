@@ -26,12 +26,9 @@ class UpdateTest < Minitest::Test
       repos: [build_repo(path: @repo)],
       packages: %w[config]
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
-    detector = Object.new
-    detector.define_singleton_method(:detect) { detection }
 
     output = capture_io {
-      Dotlayer::Commands::Update.new(config:, detector:, dry_run: true).run
+      Dotlayer::Commands::Update.new(config:, detector: stub_detector, dry_run: true).run
     }.first
 
     assert_match(/dry-run/, output)
@@ -48,12 +45,9 @@ class UpdateTest < Minitest::Test
       repos: [build_repo(path: non_git_repo)],
       packages: %w[config]
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
-    detector = Object.new
-    detector.define_singleton_method(:detect) { detection }
 
     output = capture_io {
-      Dotlayer::Commands::Update.new(config:, detector:, dry_run: true).run
+      Dotlayer::Commands::Update.new(config:, detector: stub_detector, dry_run: true).run
     }.first
 
     # Should not mention repo name in pull section (skipped)
@@ -66,12 +60,9 @@ class UpdateTest < Minitest::Test
       repos: [build_repo(path: @repo)],
       packages: %w[config]
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
-    detector = Object.new
-    detector.define_singleton_method(:detect) { detection }
 
     output = capture_io {
-      Dotlayer::Commands::Update.new(config:, detector:).run
+      Dotlayer::Commands::Update.new(config:, detector: stub_detector).run
     }.first
 
     assert_match(/Restowing.*config/, output)
@@ -95,12 +86,9 @@ class UpdateTest < Minitest::Test
       repos: [build_repo(path: local)],
       packages: %w[config]
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
-    detector = Object.new
-    detector.define_singleton_method(:detect) { detection }
 
     output, err = capture_io {
-      Dotlayer::Commands::Update.new(config:, detector:).run
+      Dotlayer::Commands::Update.new(config:, detector: stub_detector).run
     }
 
     assert_match(/failed/, output)

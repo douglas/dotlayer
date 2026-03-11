@@ -11,12 +11,10 @@ class StatusTest < Minitest::Test
       repos: [build_repo(path: tmpdir)],
       packages: %w[config]
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: ["omarchy"], groups: ["mycompany"])
-    detector = Object.new
-    detector.define_singleton_method(:detect) { detection }
+    detection = build_detection(distros: ["omarchy"], groups: ["mycompany"])
 
     output = capture_io {
-      Dotlayer::Commands::Status.new(config:, detector:).run
+      Dotlayer::Commands::Status.new(config:, detector: stub_detector(detection)).run
     }.first
 
     assert_match(/OS:.*linux/, output)
@@ -34,12 +32,9 @@ class StatusTest < Minitest::Test
       repos: [build_repo(path: "/nonexistent/repo")],
       packages: %w[config]
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
-    detector = Object.new
-    detector.define_singleton_method(:detect) { detection }
 
     output = capture_io {
-      Dotlayer::Commands::Status.new(config:, detector:).run
+      Dotlayer::Commands::Status.new(config:, detector: stub_detector).run
     }.first
 
     assert_match(/0 package/, output)
@@ -55,12 +50,9 @@ class StatusTest < Minitest::Test
       repos: [build_repo(path: tmpdir1), build_repo(path: tmpdir2)],
       packages: %w[config]
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
-    detector = Object.new
-    detector.define_singleton_method(:detect) { detection }
 
     output = capture_io {
-      Dotlayer::Commands::Status.new(config:, detector:).run
+      Dotlayer::Commands::Status.new(config:, detector: stub_detector).run
     }.first
 
     assert_match(/#{File.basename(tmpdir1)}/, output)
@@ -79,12 +71,9 @@ class StatusTest < Minitest::Test
       repos: [build_repo(path: tmpdir)],
       packages: %w[config]
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
-    detector = Object.new
-    detector.define_singleton_method(:detect) { detection }
 
     output = capture_io {
-      Dotlayer::Commands::Status.new(config:, detector:).run
+      Dotlayer::Commands::Status.new(config:, detector: stub_detector).run
     }.first
 
     assert_match(/Distros:.*\(none\)/, output)
