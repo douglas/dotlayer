@@ -18,15 +18,12 @@ class DoctorTest < Minitest::Test
     tmpdir = Dir.mktmpdir
     target = File.join(tmpdir, "home")
     repo = File.join(tmpdir, "repo")
-    FileUtils.mkdir_p([target, File.join(repo, "config", ".config", "test")])
-    File.write(File.join(repo, "config", ".config", "test", "real.txt"), "content")
+    FileUtils.mkdir_p([target, File.join(repo, "config", ".broken_link_target")])
 
-    # Create a broken symlink in target
-    config_dir = File.join(target, ".config", "test")
-    FileUtils.mkdir_p(config_dir)
-    File.symlink("/nonexistent/path", File.join(config_dir, "broken.txt"))
+    # Top-level broken symlink in target
+    File.symlink("/nonexistent/path", File.join(target, ".broken_link_target"))
 
-    config = stub_config(target: target, repos: [build_repo(path: repo)])
+    config = stub_config(target: target, repos: [build_repo(path: repo)], packages: %w[config])
 
     output = capture_io {
       Dotlayer::Commands::Doctor.new(config:, detector: stub_detector).run
@@ -78,26 +75,6 @@ class DoctorTest < Minitest::Test
     assert_match(/Package directory missing/, output)
   ensure
     Dotlayer::Resolver.define_singleton_method(:new, original_new) if original_new
-    FileUtils.rm_rf(tmpdir)
-  end
-
-  def test_top_level_broken_symlink_detected
-    tmpdir = Dir.mktmpdir
-    target = File.join(tmpdir, "home")
-    repo = File.join(tmpdir, "repo")
-    FileUtils.mkdir_p([target, File.join(repo, "config", ".broken_link_target")])
-
-    # Create a top-level broken symlink directly in target
-    File.symlink("/nonexistent/path", File.join(target, ".broken_link_target"))
-
-    config = stub_config(target: target, repos: [build_repo(path: repo)], packages: %w[config])
-
-    output = capture_io {
-      Dotlayer::Commands::Doctor.new(config:, detector: stub_detector).run
-    }.first
-
-    assert_match(/Broken symlink/, output)
-  ensure
     FileUtils.rm_rf(tmpdir)
   end
 

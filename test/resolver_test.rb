@@ -14,9 +14,8 @@ class ResolverTest < Minitest::Test
   def test_resolves_base_packages
     create_dirs("stow", "bin", "git", "zsh", "config")
     config = stub_config(repos: [build_repo(path: @tmpdir)])
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
 
-    packages = resolve(config, detection)
+    packages = resolve(config, build_detection)
 
     assert_equal %w[stow bin git zsh config], packages
   end
@@ -24,9 +23,8 @@ class ResolverTest < Minitest::Test
   def test_resolves_os_layer
     create_dirs("config", "config-linux", "config-macos")
     config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
 
-    packages = resolve(config, detection)
+    packages = resolve(config, build_detection)
 
     assert_includes packages, "config-linux"
     refute_includes packages, "config-macos"
@@ -35,9 +33,8 @@ class ResolverTest < Minitest::Test
   def test_resolves_distro_layer
     create_dirs("config", "config-omarchy", "config-fedora")
     config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: ["omarchy"], groups: [])
 
-    packages = resolve(config, detection)
+    packages = resolve(config, build_detection(distros: ["omarchy"]))
 
     assert_includes packages, "config-omarchy"
     refute_includes packages, "config-fedora"
@@ -46,9 +43,8 @@ class ResolverTest < Minitest::Test
   def test_resolves_distro_profile_layer
     create_dirs("config", "config-omarchy", "config-omarchy-desktop", "config-omarchy-laptop")
     config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: ["omarchy"], groups: [])
 
-    packages = resolve(config, detection)
+    packages = resolve(config, build_detection(distros: ["omarchy"]))
 
     assert_includes packages, "config-omarchy-desktop"
     refute_includes packages, "config-omarchy-laptop"
@@ -57,9 +53,8 @@ class ResolverTest < Minitest::Test
   def test_layer_order_is_os_then_distro_then_distro_profile
     create_dirs("config", "config-linux", "config-omarchy", "config-omarchy-desktop")
     config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: ["omarchy"], groups: [])
 
-    packages = resolve(config, detection)
+    packages = resolve(config, build_detection(distros: ["omarchy"]))
 
     linux_idx = packages.index("config-linux")
     omarchy_idx = packages.index("config-omarchy")
@@ -72,9 +67,8 @@ class ResolverTest < Minitest::Test
   def test_skips_nonexistent_base_packages
     create_dirs("config")
     config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[stow config])
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
 
-    packages = resolve(config, detection)
+    packages = resolve(config, build_detection)
 
     assert_equal %w[config], packages
   end
@@ -82,9 +76,8 @@ class ResolverTest < Minitest::Test
   def test_multiple_distros
     create_dirs("config", "config-omarchy", "config-omarchy-desktop", "config-fedora-desktop")
     config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: %w[omarchy fedora], groups: [])
 
-    packages = resolve(config, detection)
+    packages = resolve(config, build_detection(distros: %w[omarchy fedora]))
 
     assert_includes packages, "config-omarchy"
     assert_includes packages, "config-omarchy-desktop"
@@ -94,9 +87,8 @@ class ResolverTest < Minitest::Test
   def test_resolves_group_layer
     create_dirs("config", "config-mycompany", "config-acme")
     config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: ["mycompany"])
 
-    packages = resolve(config, detection)
+    packages = resolve(config, build_detection(groups: ["mycompany"]))
 
     assert_includes packages, "config-mycompany"
     refute_includes packages, "config-acme"
@@ -105,9 +97,7 @@ class ResolverTest < Minitest::Test
   def test_groups_come_after_distro_profile_layers
     create_dirs("config", "config-linux", "config-omarchy", "config-omarchy-desktop", "config-mycompany")
     config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])
-    detection = Dotlayer::Detection.new(
-      os: "linux", profile: "desktop", distros: ["omarchy"], groups: ["mycompany"]
-    )
+    detection = build_detection(distros: ["omarchy"], groups: ["mycompany"])
 
     packages = resolve(config, detection)
 
@@ -125,9 +115,8 @@ class ResolverTest < Minitest::Test
       repos: [build_repo(path: private_dir, private: true, packages: %w[config fonts])],
       packages: %w[stow bin git zsh config]
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: ["mycompany"])
 
-    packages = resolve(config, detection)
+    packages = resolve(config, build_detection(groups: ["mycompany"]))
 
     assert_includes packages, "config"
     assert_includes packages, "fonts"
@@ -140,9 +129,8 @@ class ResolverTest < Minitest::Test
   def test_standalone_dirs_in_layered_repo
     create_dirs("config", "config-linux", "claude", "scripts")
     config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
 
-    packages = resolve(config, detection)
+    packages = resolve(config, build_detection)
 
     assert_equal %w[config config-linux claude scripts], packages
   end
@@ -156,8 +144,7 @@ class ResolverTest < Minitest::Test
       repos: [build_repo(path: @tmpdir), build_repo(path: private_dir)],
       packages: %w[config]
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
-    resolver = Dotlayer::Resolver.new(config: config, detection: detection)
+    resolver = Dotlayer::Resolver.new(config: config, detection: build_detection)
     packages = resolver.resolve
 
     assert_equal ["config"], packages.select { |r, _| r == @tmpdir }.map(&:last)
@@ -171,9 +158,8 @@ class ResolverTest < Minitest::Test
   def test_single_repo_no_matching_base_dirs_stows_all
     create_dirs("claude", "fonts", "zed")
     config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[stow bin git])
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
 
-    packages = resolve(config, detection)
+    packages = resolve(config, build_detection)
 
     assert_equal %w[claude fonts zed], packages
   end
@@ -181,9 +167,8 @@ class ResolverTest < Minitest::Test
   def test_layer_variant_does_not_match_prefix_substring
     create_dirs("config", "configure", "config-linux")
     config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
 
-    packages = resolve(config, detection)
+    packages = resolve(config, build_detection)
 
     assert_includes packages, "config"
     assert_includes packages, "config-linux"
@@ -200,9 +185,8 @@ class ResolverTest < Minitest::Test
       repos: [build_repo(path: repo1), build_repo(path: repo2)],
       packages: %w[config bin]
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
 
-    resolver = Dotlayer::Resolver.new(config: config, detection: detection)
+    resolver = Dotlayer::Resolver.new(config: config, detection: build_detection)
     all_packages = resolver.resolve
 
     repo1_pkgs = all_packages.select { |r, _| r == repo1 }.map(&:last)
@@ -223,9 +207,8 @@ class ResolverTest < Minitest::Test
   def test_skips_hidden_directories
     create_dirs("config", ".git", ".github")
     config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
 
-    packages = resolve(config, detection)
+    packages = resolve(config, build_detection)
 
     refute packages.any? { |p| p.start_with?(".") }, "hidden dirs should be excluded"
   end
@@ -235,9 +218,8 @@ class ResolverTest < Minitest::Test
       repos: [build_repo(path: "/nonexistent/repo")],
       packages: %w[config]
     )
-    detection = Dotlayer::Detection.new(os: "linux", profile: "desktop", distros: [], groups: [])
 
-    packages = resolve(config, detection)
+    packages = resolve(config, build_detection)
 
     assert_empty packages
   end
