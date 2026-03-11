@@ -58,7 +58,8 @@ module Dotlayer
 
         relative = relative_to_target(source)
         unless relative
-          abort "Error: #{source} is not under target #{@target}"
+          warn "  #{red("Skipping #{source}: not under target #{@target}")}"
+          return
         end
 
         dest = File.join(repo_path, @package, relative)

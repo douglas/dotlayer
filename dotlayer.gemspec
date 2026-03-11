@@ -1,6 +1,8 @@
+require_relative "lib/dotlayer"
+
 Gem::Specification.new do |spec|
   spec.name = "dotlayer"
-  spec.version = "0.1.0"
+  spec.version = Dotlayer::VERSION
   spec.authors = ["Douglas Andrade"]
   spec.email = ["douglas@51street.dev"]
 

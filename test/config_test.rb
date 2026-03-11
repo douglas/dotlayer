@@ -65,4 +65,21 @@ class ConfigTest < Minitest::Test
       assert_nil config.repos[0].packages
     end
   end
+
+  def test_repos_filters_nil_and_empty_paths
+    Dir.mktmpdir do |dir|
+      config_path = File.join(dir, "dotlayer.yml")
+      File.write(config_path, <<~YAML)
+        repos:
+          - path:
+          - path: ""
+          - path: ~/.dotfiles
+      YAML
+
+      config = Dotlayer::Config.new(config_path)
+
+      assert_equal 1, config.repos.size
+      assert_equal File.expand_path("~/.dotfiles"), config.repos[0].path
+    end
+  end
 end

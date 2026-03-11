@@ -85,13 +85,13 @@ class AdoptTest < Minitest::Test
     refute File.symlink?(source)
   end
 
-  def test_rejects_path_outside_target
+  def test_skips_path_outside_target
     outside = File.join(@tmpdir, "outside", "stuff")
     FileUtils.mkdir_p(outside)
 
-    assert_raises(SystemExit) do
-      run_adopt(paths: [outside])
-    end
+    # Should warn and skip, not abort
+    _out, err = capture_io { run_adopt(paths: [outside]) }
+    assert_match(/not under target/, err)
   end
 
   def test_skips_nonexistent_source
