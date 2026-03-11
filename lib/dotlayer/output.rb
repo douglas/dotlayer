@@ -35,16 +35,5 @@ module Dotlayer
     def bold(text)
       "\e[1m#{text}\e[0m"
     end
-
-    def stow_package(stow, repo_path, package, verb: "Stowing")
-      print "  #{verb} #{green(package)}... "
-      if stow.dry_run?
-        warn_text("dry-run")
-      elsif stow.restow(repo_path, package)
-        ok
-      else
-        error("failed")
-      end
-    end
   end
 end

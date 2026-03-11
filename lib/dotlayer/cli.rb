@@ -18,7 +18,7 @@ module Dotlayer
       when "update"  then Commands::Update.new(config:, dry_run: options[:dry_run], verbose: options[:verbose]).run
       when "doctor"  then Commands::Doctor.new(config:).run
       when "adopt"   then run_adopt(config:, argv:, options:)
-      when "version", "--version"
+      when "version"
         puts "dotlayer #{VERSION}"
       else
         print_usage

@@ -5,7 +5,7 @@ module Dotlayer
     class Update
       include Output
 
-      def initialize(config: Config.new, detector: nil, dry_run: false, verbose: false)
+      def initialize(config:, detector: nil, dry_run: false, verbose: false)
         @config = config
         @detector = detector || Detector.new(config: @config)
         @dry_run = dry_run
@@ -54,11 +54,22 @@ module Dotlayer
         heading "Re-stowing packages"
 
         packages.each do |repo_path, package|
-          stow_package(stow, repo_path, package, verb: "Restowing")
+          restow_package(stow, repo_path, package)
         end
 
         puts
         puts "Done! #{packages.size} package(s) restowed."
+      end
+
+      def restow_package(stow, repo_path, package)
+        print "  Restowing #{green(package)}... "
+        if stow.dry_run?
+          warn_text("dry-run")
+        elsif stow.restow(repo_path, package)
+          ok
+        else
+          error("failed: #{stow.last_error}")
+        end
       end
     end
   end

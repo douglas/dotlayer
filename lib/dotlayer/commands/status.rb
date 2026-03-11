@@ -3,7 +3,7 @@ module Dotlayer
     class Status
       include Output
 
-      def initialize(config: Config.new, detector: nil)
+      def initialize(config:, detector: nil)
         @config = config
         @detector = detector || Detector.new(config: @config)
       end

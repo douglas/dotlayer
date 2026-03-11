@@ -2,6 +2,8 @@ require "open3"
 
 module Dotlayer
   class Stow
+    attr_reader :last_error
+
     def initialize(target: "~", dry_run: false, verbose: false)
       @target = File.expand_path(target)
       @dry_run = dry_run
@@ -10,36 +12,21 @@ module Dotlayer
 
     def dry_run? = @dry_run
 
-    def stow(repo_path, package)
-      run_stow(repo_path, package)
-    end
-
     def restow(repo_path, package)
-      run_stow(repo_path, package, restow: true)
-    end
-
-    def unstow(repo_path, package)
-      run_stow(repo_path, package, unstow: true)
+      run_stow(repo_path, package)
     end
 
     private
 
-    def run_stow(repo_path, package, restow: false, unstow: false)
-      args = ["stow"]
+    def run_stow(repo_path, package)
+      args = ["stow", "-R"]
       args << "-v" if @verbose
       args << "-d" << repo_path
       args << "-t" << @target
-
-      if unstow
-        args << "-D"
-      elsif restow
-        args << "-R"
-      end
-
       args << package
 
       if @verbose || @dry_run
-        $stderr.puts "  \e[36m#{args.join(" ")}\e[0m"
+        $stderr.puts "  #{args.join(" ")}"
       end
 
       return true if @dry_run

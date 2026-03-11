@@ -3,7 +3,7 @@ module Dotlayer
     class Doctor
       include Output
 
-      def initialize(config: Config.new, detector: nil)
+      def initialize(config:, detector: nil)
         @config = config
         @detector = detector || Detector.new(config: @config)
         @issues = []
@@ -12,14 +12,14 @@ module Dotlayer
       def run
         detection = @detector.detect
         resolver = Resolver.new(config: @config, detection: detection)
-        packages = resolver.resolve
+        @packages = resolver.resolve
 
         heading "Dotlayer Doctor"
         puts
 
         check_stow_installed
         check_repos_exist
-        check_packages_exist(packages)
+        check_packages_exist(@packages)
         check_broken_symlinks
 
         puts
@@ -78,13 +78,28 @@ module Dotlayer
         end
       end
 
-      def find_broken_symlinks(dir)
+      def find_broken_symlinks(target)
         broken = []
-        config_dir = File.join(dir, ".config")
-        return broken unless Dir.exist?(config_dir)
+        scan_dirs = @packages.flat_map { |repo_path, package|
+          pkg_dir = File.join(repo_path, package)
+          next [] unless Dir.exist?(pkg_dir)
 
-        Dir.glob(File.join(config_dir, "**", "*"), File::FNM_DOTMATCH).each do |path|
-          broken << path if File.symlink?(path) && !File.exist?(path)
+          Dir.children(pkg_dir).map { |child| File.join(target, child) }
+        }.uniq
+
+        scan_dirs.each do |dir|
+          next unless File.exist?(dir) || File.symlink?(dir)
+
+          if File.symlink?(dir) && !File.exist?(dir)
+            broken << dir
+            next
+          end
+
+          next unless File.directory?(dir)
+
+          Dir.glob(File.join(dir, "**", "*"), File::FNM_DOTMATCH).each do |path|
+            broken << path if File.symlink?(path) && !File.exist?(path)
+          end
         end
 
         broken

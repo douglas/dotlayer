@@ -3,7 +3,7 @@ module Dotlayer
     class Install
       include Output
 
-      def initialize(config: Config.new, detector: nil, dry_run: false, verbose: false)
+      def initialize(config:, detector: nil, dry_run: false, verbose: false)
         @config = config
         @detector = detector || Detector.new(config: @config)
         @dry_run = dry_run
@@ -20,7 +20,7 @@ module Dotlayer
         puts
 
         packages.each do |repo_path, package|
-          stow_package(stow, repo_path, package)
+          restow_package(stow, repo_path, package)
         end
 
         install_system_files if detection.os == "linux"
@@ -79,6 +79,17 @@ module Dotlayer
         end
 
         run_hooks("after_system_files")
+      end
+
+      def restow_package(stow, repo_path, package)
+        print "  Stowing #{green(package)}... "
+        if stow.dry_run?
+          warn_text("dry-run")
+        elsif stow.restow(repo_path, package)
+          ok
+        else
+          error("failed: #{stow.last_error}")
+        end
       end
 
       def run_hooks(name)
