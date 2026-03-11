@@ -36,7 +36,7 @@ class ConfigTest < Minitest::Test
       assert_equal %w[stow config], config.packages
       assert_equal "echo laptop", config.profile_detect
       assert_equal "MY_PROFILE", config.profile_env
-      assert_equal({ "omarchy" => { "detect" => "command -v omarchy" } }, config.distros)
+      assert_equal({"omarchy" => {"detect" => "command -v omarchy"}}, config.distros)
     end
   end
 
@@ -101,7 +101,7 @@ class ConfigTest < Minitest::Test
 
       config = Dotlayer::Config.new(config_path)
 
-      assert_equal({ "mycompany" => { "detect" => "test -d ~/src/mycompany" } }, config.groups)
+      assert_equal({"mycompany" => {"detect" => "test -d ~/src/mycompany"}}, config.groups)
     end
   end
 
@@ -116,7 +116,7 @@ class ConfigTest < Minitest::Test
 
       config = Dotlayer::Config.new(config_path)
 
-      assert_equal({ "after_system_files" => ["echo done"] }, config.hooks)
+      assert_equal({"after_system_files" => ["echo done"]}, config.hooks)
     end
   end
 

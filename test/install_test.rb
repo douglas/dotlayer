@@ -56,7 +56,7 @@ class InstallTest < Minitest::Test
       target: @target,
       repos: [],
       packages: %w[config],
-      system_files: [{ "source" => "foo", "dest" => "/tmp/bar" }]
+      system_files: [{"source" => "foo", "dest" => "/tmp/bar"}]
     )
 
     output = capture_io {
@@ -75,7 +75,7 @@ class InstallTest < Minitest::Test
       target: @target,
       repos: [build_repo(path: @repo)],
       packages: %w[config],
-      system_files: [{ "source" => "config/etc/test.conf", "dest" => "/tmp/test.conf" }],
+      system_files: [{"source" => "config/etc/test.conf", "dest" => "/tmp/test.conf"}],
       hooks: {}
     )
 
@@ -93,7 +93,7 @@ class InstallTest < Minitest::Test
       target: @target,
       repos: [build_repo(path: @repo)],
       packages: %w[config],
-      system_files: [{ "source" => "config/etc/test.conf", "dest" => "/tmp/test.conf" }],
+      system_files: [{"source" => "config/etc/test.conf", "dest" => "/tmp/test.conf"}],
       hooks: {}
     )
 
@@ -114,7 +114,7 @@ class InstallTest < Minitest::Test
       target: @target,
       repos: [build_repo(path: @repo)],
       packages: %w[config],
-      system_files: [{ "source" => "foo", "dest" => "/tmp/bar" }],
+      system_files: [{"source" => "foo", "dest" => "/tmp/bar"}],
       hooks: {}
     )
     detection = build_detection(os: "macos")
@@ -135,8 +135,8 @@ class InstallTest < Minitest::Test
       target: @target,
       repos: [build_repo(path: @repo)],
       packages: %w[config],
-      system_files: [{ "source" => "config/etc/test.conf", "dest" => "/tmp/dotlayer_hook_test" }],
-      hooks: { "after_system_files" => ["echo hook_ran"] }
+      system_files: [{"source" => "config/etc/test.conf", "dest" => "/tmp/dotlayer_hook_test"}],
+      hooks: {"after_system_files" => ["echo hook_ran"]}
     )
 
     output = capture_io {
@@ -156,8 +156,8 @@ class InstallTest < Minitest::Test
       target: @target,
       repos: [build_repo(path: @repo)],
       packages: %w[config],
-      system_files: [{ "source" => "config/etc/test.conf", "dest" => "/tmp/dotlayer_hook_test" }],
-      hooks: { "after_system_files" => ["echo hook_ran"] }
+      system_files: [{"source" => "config/etc/test.conf", "dest" => "/tmp/dotlayer_hook_test"}],
+      hooks: {"after_system_files" => ["echo hook_ran"]}
     )
 
     # First "y" accepts system files install, second "n" rejects hooks
@@ -186,8 +186,8 @@ class InstallTest < Minitest::Test
       target: @target,
       repos: [build_repo(path: @repo)],
       packages: %w[config],
-      system_files: [{ "source" => "config/etc/test.conf", "dest" => "/tmp/dotlayer_hook_test" }],
-      hooks: { "after_system_files" => ["echo hook_ran"] }
+      system_files: [{"source" => "config/etc/test.conf", "dest" => "/tmp/dotlayer_hook_test"}],
+      hooks: {"after_system_files" => ["echo hook_ran"]}
     )
 
     # "y" accepts system files, "y" accepts hooks
@@ -196,7 +196,10 @@ class InstallTest < Minitest::Test
     commands_run = []
     output = capture_io {
       install = Dotlayer::Commands::Install.new(config:, detector: stub_detector)
-      install.define_singleton_method(:system) { |*args| commands_run << args; true }
+      install.define_singleton_method(:system) { |*args|
+        commands_run << args
+        true
+      }
       install.run
     }.first
     $stdin = original_stdin

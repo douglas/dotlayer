@@ -17,7 +17,7 @@ module Dotlayer
     def detect_os
       case RbConfig::CONFIG["host_os"]
       when /darwin/ then "macos"
-      when /linux/  then "linux"
+      when /linux/ then "linux"
       else "unknown"
       end
     end

@@ -72,7 +72,11 @@ module Dotlayer
         else
           warning "#{broken.size} found"
           broken.each do |link|
-            target = File.readlink(link) rescue "(deleted)"
+            target = begin
+              File.readlink(link)
+            rescue
+              "(deleted)"
+            end
             @issues << "Broken symlink: #{link} -> #{target}"
           end
         end

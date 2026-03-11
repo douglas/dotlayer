@@ -23,7 +23,7 @@ module Dotlayer
     end
 
     def repos
-      @repos ||= @data.fetch("repos", [{ "path" => "~/.public_dotfiles" }]).filter_map do |entry|
+      @repos ||= @data.fetch("repos", [{"path" => "~/.public_dotfiles"}]).filter_map do |entry|
         path = entry["path"]&.to_s
         next if path.nil? || path.empty?
 

@@ -87,7 +87,7 @@ class UpdateTest < Minitest::Test
       packages: %w[config]
     )
 
-    output, err = capture_io {
+    output, _ = capture_io {
       Dotlayer::Commands::Update.new(config:, detector: stub_detector).run
     }
 

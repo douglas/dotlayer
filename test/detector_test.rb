@@ -31,7 +31,7 @@ class DetectorTest < Minitest::Test
   end
 
   def test_detect_distro_with_command
-    config = stub_config(distros: { "test_distro" => { "detect" => "true" } })
+    config = stub_config(distros: {"test_distro" => {"detect" => "true"}})
 
     detector = Dotlayer::Detector.new(config: config)
     detection = detector.detect
@@ -40,7 +40,7 @@ class DetectorTest < Minitest::Test
   end
 
   def test_detect_distro_not_found
-    config = stub_config(distros: { "missing_distro" => { "detect" => "false" } })
+    config = stub_config(distros: {"missing_distro" => {"detect" => "false"}})
 
     detector = Dotlayer::Detector.new(config: config)
     detection = detector.detect
@@ -49,7 +49,7 @@ class DetectorTest < Minitest::Test
   end
 
   def test_detect_group_with_command
-    config = stub_config(groups: { "mycompany" => { "detect" => "true" } })
+    config = stub_config(groups: {"mycompany" => {"detect" => "true"}})
 
     detector = Dotlayer::Detector.new(config: config)
     detection = detector.detect
@@ -58,7 +58,7 @@ class DetectorTest < Minitest::Test
   end
 
   def test_detect_group_not_found
-    config = stub_config(groups: { "acme" => { "detect" => "false" } })
+    config = stub_config(groups: {"acme" => {"detect" => "false"}})
 
     detector = Dotlayer::Detector.new(config: config)
     detection = detector.detect
@@ -79,8 +79,8 @@ class DetectorTest < Minitest::Test
   end
 
   def test_invalid_detect_values_skipped
-    [{ "detect" => "" }, {}, { "detect" => 42 }].each do |entry|
-      config = stub_config(distros: { "broken" => entry })
+    [{"detect" => ""}, {}, {"detect" => 42}].each do |entry|
+      config = stub_config(distros: {"broken" => entry})
 
       detector = Dotlayer::Detector.new(config: config)
       detection = detector.detect

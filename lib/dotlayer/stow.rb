@@ -20,7 +20,7 @@ module Dotlayer
       args << package
 
       if @verbose || @dry_run
-        $stderr.puts "  #{args.join(" ")}"
+        warn "  #{args.join(" ")}"
       end
 
       return true if @dry_run

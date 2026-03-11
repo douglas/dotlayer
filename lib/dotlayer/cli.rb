@@ -13,11 +13,11 @@ module Dotlayer
       config = Config.new(options[:config])
 
       case command
-      when "status"  then Commands::Status.new(config:).run
+      when "status" then Commands::Status.new(config:).run
       when "install" then Commands::Install.new(config:, dry_run: options[:dry_run], verbose: options[:verbose]).run
-      when "update"  then Commands::Update.new(config:, dry_run: options[:dry_run], verbose: options[:verbose]).run
-      when "doctor"  then Commands::Doctor.new(config:).run
-      when "adopt"   then run_adopt(config:, argv:, options:)
+      when "update" then Commands::Update.new(config:, dry_run: options[:dry_run], verbose: options[:verbose]).run
+      when "doctor" then Commands::Doctor.new(config:).run
+      when "adopt" then run_adopt(config:, argv:, options:)
       when "version"
         puts "dotlayer #{VERSION}"
       else
@@ -28,7 +28,7 @@ module Dotlayer
     private
 
     def parse_global_options(argv)
-      options = { dry_run: false, verbose: false, config: nil, private: false }
+      options = {dry_run: false, verbose: false, config: nil, private: false}
 
       OptionParser.new do |opts|
         opts.on("-c", "--config PATH", "Config file path") { |v| options[:config] = v }
