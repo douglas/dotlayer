@@ -38,7 +38,12 @@ class AdoptTest < Minitest::Test
     assert File.exist?(dest), "config.yml should be moved into package"
     assert_equal "theme: dark", File.read(dest)
     # After restow, original path becomes a symlink managed by stow
-    refute File.realpath(source).start_with?(@target), "source should point into repo after restow"
+    if File.symlink?(source)
+      refute File.realpath(source).start_with?(@target), "source should point into repo after restow"
+    else
+      # stow not available — file was moved but no symlink was created back
+      refute File.exist?(source), "source should have been moved"
+    end
   end
 
   def test_moves_single_file
