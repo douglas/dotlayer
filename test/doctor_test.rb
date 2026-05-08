@@ -18,10 +18,10 @@ class DoctorTest < Minitest::Test
     tmpdir = Dir.mktmpdir
     target = File.join(tmpdir, "home")
     repo = File.join(tmpdir, "repo")
-    FileUtils.mkdir_p([target, File.join(repo, "config", ".broken_link_target")])
+    FileUtils.mkdir_p([File.join(target, ".config"), File.join(repo, "config", ".config")])
+    FileUtils.touch(File.join(repo, "config", ".config", "broken_link_target"))
 
-    # Top-level broken symlink in target
-    File.symlink("/nonexistent/path", File.join(target, ".broken_link_target"))
+    File.symlink("/nonexistent/path", File.join(target, ".config", "broken_link_target"))
 
     config = stub_config(target: target, repos: [build_repo(path: repo)], packages: %w[config])
 
@@ -30,6 +30,36 @@ class DoctorTest < Minitest::Test
     }.first
 
     assert_match(/Broken symlink/, output)
+  ensure
+    FileUtils.rm_rf(tmpdir)
+  end
+
+  def test_ignores_broken_symlinks_outside_managed_config_paths
+    tmpdir = Dir.mktmpdir
+    target = File.join(tmpdir, "home")
+    repo = File.join(tmpdir, "repo")
+    FileUtils.mkdir_p([
+      File.join(target, ".config"),
+      File.join(target, ".local", "share", "Steam"),
+      File.join(target, "work"),
+      File.join(repo, "config", ".config"),
+      File.join(repo, "config", ".local", "bin"),
+      File.join(repo, "config", "work")
+    ])
+
+    FileUtils.touch(File.join(repo, "config", ".local", "bin", "managed-tool"))
+    File.symlink("/nonexistent/path", File.join(target, ".local", "share", "Steam", "stale"))
+    File.symlink("/nonexistent/path", File.join(target, "work", "stale"))
+
+    config = stub_config(target: target, repos: [build_repo(path: repo)], packages: %w[config])
+
+    output = capture_io {
+      Dotlayer::Commands::Doctor.new(config:, detector: stub_detector).run
+    }.first
+
+    assert_match(/No issues found/, output)
+    refute_match(/Steam\/stale/, output)
+    refute_match(/work\/stale/, output)
   ensure
     FileUtils.rm_rf(tmpdir)
   end

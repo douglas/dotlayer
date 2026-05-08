@@ -65,7 +65,7 @@ module Dotlayer
       end
 
       def check_broken_symlinks
-        print "  Checking for broken symlinks in #{@config.target}... "
+        print "  Checking for broken symlinks in managed config paths... "
         broken = find_broken_symlinks(@config.target)
         if broken.empty?
           ok "none"
@@ -84,26 +84,28 @@ module Dotlayer
 
       def find_broken_symlinks(target)
         broken = []
-        scan_dirs = @packages.flat_map { |repo_path, package|
+        managed_roots = [".config", ".local"]
+        scan_paths = @packages.flat_map { |repo_path, package|
           pkg_dir = File.join(repo_path, package)
           next [] unless Dir.exist?(pkg_dir)
 
-          Dir.children(pkg_dir).map { |child| File.join(target, child) }
+          managed_roots.flat_map do |root_name|
+            root_path = File.join(pkg_dir, root_name)
+            next [] unless File.exist?(root_path) || File.symlink?(root_path)
+
+            managed_paths = [root_path]
+            if File.directory?(root_path)
+              managed_paths.concat(Dir.glob(File.join(root_path, "**", "*"), File::FNM_DOTMATCH))
+            end
+
+            managed_paths
+              .reject { |path| [".", ".."].include?(File.basename(path)) }
+              .map { |path| File.join(target, path.delete_prefix("#{pkg_dir}/")) }
+          end
         }.uniq
 
-        scan_dirs.each do |dir|
-          next unless File.exist?(dir) || File.symlink?(dir)
-
-          if File.symlink?(dir) && !File.exist?(dir)
-            broken << dir
-            next
-          end
-
-          next unless File.directory?(dir)
-
-          Dir.glob(File.join(dir, "**", "*"), File::FNM_DOTMATCH).each do |path|
-            broken << path if File.symlink?(path) && !File.exist?(path)
-          end
+        scan_paths.each do |path|
+          broken << path if File.symlink?(path) && !File.exist?(path)
         end
 
         broken
