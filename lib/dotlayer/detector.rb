@@ -27,7 +27,7 @@ module Dotlayer
       return from_env if from_env && !from_env.empty?
 
       if @config.profile_detect && !@config.profile_detect.empty?
-        output, status = Open3.capture2(@config.profile_detect)
+        output, status = Open3.capture2("sh", "-c", @config.profile_detect, err: File::NULL)
         return output.strip if status.success? && !output.strip.empty?
       end
 
