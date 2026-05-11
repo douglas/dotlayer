@@ -13,7 +13,7 @@ module Dotlayer
     def dry_run? = @dry_run
 
     def restow(repo_path, package)
-      args = ["stow", "-R"]
+      args = ["stow", "-R", "--no-folding"]
       args << "-v" if @verbose
       args << "-d" << repo_path
       args << "-t" << @target

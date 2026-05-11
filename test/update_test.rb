@@ -67,10 +67,10 @@ class UpdateTest < Minitest::Test
 
     assert_match(/Restowing.*config/, output)
     assert_match(/1 package/, output)
-    # Stow should have created symlinks
-    config_dir = File.join(@target, ".config")
-    assert File.symlink?(config_dir) || File.symlink?(File.join(config_dir, "test")),
-      "stow should create symlinks after update"
+    assert File.directory?(File.join(@target, ".config"))
+    assert File.directory?(File.join(@target, ".config", "test"))
+    assert File.symlink?(File.join(@target, ".config", "test", "config.yml")),
+      "stow should create file symlinks after update"
   end
 
   def test_pull_failure_shows_error

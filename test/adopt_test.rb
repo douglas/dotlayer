@@ -37,9 +37,9 @@ class AdoptTest < Minitest::Test
     dest = File.join(@repo, "config", ".config", "lazygit", "config.yml")
     assert File.exist?(dest), "config.yml should be moved into package"
     assert_equal "theme: dark", File.read(dest)
-    # After restow, original path becomes a symlink managed by stow
-    if File.symlink?(source)
-      refute File.realpath(source).start_with?(@target), "source should point into repo after restow"
+    source_file = File.join(source, "config.yml")
+    if File.symlink?(source_file)
+      refute File.realpath(source_file).start_with?(@target), "source file should point into repo after restow"
     else
       # stow not available — file was moved but no symlink was created back
       refute File.exist?(source), "source should have been moved"

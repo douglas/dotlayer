@@ -25,10 +25,26 @@ class StowTest < Minitest::Test
     stow = Dotlayer::Stow.new(target: @target)
 
     assert stow.restow(@repo, "pkg")
-    # Stow tree-folds: may symlink .config directly or .config/test
-    config_dir = File.join(@target, ".config")
-    assert File.symlink?(config_dir) || File.symlink?(File.join(config_dir, "test")),
-      "stow should create symlinks in target"
+    assert File.directory?(File.join(@target, ".config"))
+    assert File.directory?(File.join(@target, ".config", "test"))
+    assert File.symlink?(File.join(@target, ".config", "test", "config.yml")),
+      "stow should create file symlinks without folding parent directories"
+  end
+
+  def test_restow_allows_later_packages_to_share_parent_directories
+    first_repo = File.join(@tmpdir, "first")
+    second_repo = File.join(@tmpdir, "second")
+    FileUtils.mkdir_p(File.join(first_repo, "pkg", ".local", "share", "first"))
+    FileUtils.mkdir_p(File.join(second_repo, "pkg", ".local", "share", "second"))
+    File.write(File.join(first_repo, "pkg", ".local", "share", "first", "config"), "first")
+    File.write(File.join(second_repo, "pkg", ".local", "share", "second", "config"), "second")
+
+    stow = Dotlayer::Stow.new(target: @target)
+
+    assert stow.restow(first_repo, "pkg")
+    assert stow.restow(second_repo, "pkg")
+    assert File.symlink?(File.join(@target, ".local", "share", "first", "config"))
+    assert File.symlink?(File.join(@target, ".local", "share", "second", "config"))
   end
 
   def test_restow_failure_sets_last_error
@@ -57,7 +73,7 @@ class StowTest < Minitest::Test
 
     _, err = capture_io { stow.restow(@repo, "pkg") }
 
-    assert_match(/stow -R -v/, err)
+    assert_match(/stow -R --no-folding -v/, err)
   end
 
   def test_dry_run_prints_command_to_stderr
@@ -65,7 +81,7 @@ class StowTest < Minitest::Test
 
     _, err = capture_io { stow.restow(@repo, "pkg") }
 
-    assert_match(/stow -R/, err)
+    assert_match(/stow -R --no-folding/, err)
   end
 
   def test_missing_stow_binary_sets_error

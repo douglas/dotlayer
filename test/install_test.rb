@@ -44,11 +44,10 @@ class InstallTest < Minitest::Test
 
     assert_match(/Stowing.*config/, output)
     assert_match(/1 package/, output)
-    # Stow should have created symlinks
-    config_test = File.join(@target, ".config", "test")
-    config_dir = File.join(@target, ".config")
-    assert File.symlink?(config_dir) || File.symlink?(config_test),
-      "stow should create symlinks in target"
+    assert File.directory?(File.join(@target, ".config"))
+    assert File.directory?(File.join(@target, ".config", "test"))
+    assert File.symlink?(File.join(@target, ".config", "test", "config.yml")),
+      "stow should create file symlinks in target"
   end
 
   def test_skips_system_files_when_no_repos
