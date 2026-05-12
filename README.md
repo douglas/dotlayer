@@ -13,6 +13,7 @@ config-macos/               → stowed on macOS
 config-omarchy/             → stowed when Omarchy is detected
 config-omarchy-desktop/     → stowed on Omarchy + desktop profile
 config-omarchy-laptop/      → stowed on Omarchy + laptop profile
+config-omarchy-laptop-t14/  → stowed on Omarchy + laptop profile + t14 machine
 config-mycompany/            → stowed when mycompany group is detected
 ```
 
@@ -57,12 +58,13 @@ dotlayer adopt --private ~/.config/lazysql config
 
 ## How it works
 
-Dotlayer auto-detects four things about your system:
+Dotlayer auto-detects five things about your system:
 
 | Detection | Method | Example |
 |-----------|--------|---------|
 | **OS** | `RbConfig::CONFIG["host_os"]` | `linux`, `macos` |
 | **Profile** | `hostnamectl chassis` or `$DOTLAYER_PROFILE` | `desktop`, `laptop` |
+| **Machine** | `$DOTLAYER_MACHINE`, configured shell commands, then `hostname -s` fallback | `t14`, `framework-desktop` |
 | **Distro** | Shell commands from config | `omarchy`, `fedora` |
 | **Group** | Shell commands from config | `work`, `mycompany` |
 
@@ -72,7 +74,11 @@ It then scans your dotfiles repo for directories matching these tags and stows t
 2. **OS layer** — `config-linux` or `config-macos`
 3. **Distro layer** — `config-omarchy`
 4. **Distro + profile** — `config-omarchy-desktop`
-5. **Group layer** — `config-mycompany`
+5. **Machine layer** — `config-t14`
+6. **OS + machine** — `config-linux-t14`
+7. **Distro + machine** — `config-omarchy-t14`
+8. **Distro + profile + machine** — `config-omarchy-laptop-t14`
+9. **Group layer** — `config-mycompany`
 
 Each layer can add files but never conflict with earlier layers (Stow constraint).
 
@@ -98,6 +104,11 @@ packages:
 profiles:
   detect: hostnamectl chassis
   env: DOTLAYER_PROFILE
+
+machines:
+  env: DOTLAYER_MACHINE
+  t14:
+    detect: model="$(cat /sys/class/dmi/id/product_name /sys/class/dmi/id/product_version 2>/dev/null)"; case "$model" in *T14*) exit 0 ;; *) exit 1 ;; esac
 
 distros:
   omarchy:
@@ -162,9 +173,18 @@ repos:
     packages:
       - config
       - fonts
+    standalone_packages:
+      - claude
+      - shared
+    group_packages:
+      mycompany:
+        - work
 ```
 
 The `private: true` flag tells dotlayer which repo to use when you run `dotlayer adopt --private`.
+`standalone_packages` is an allowlist for non-layered packages in that repo.
+`group_packages` lets a group detection rule opt in exact package names like `work`
+that do not follow the `config-mycompany` suffix convention.
 
 ### What goes where?
 
@@ -176,6 +196,8 @@ The `private: true` flag tells dotlayer which repo to use when you run `dotlayer
   config-linux/                 ← Linux-specific overrides
   config-omarchy/               ← Omarchy distro overrides
   config-omarchy-desktop/       ← Omarchy + desktop profile
+  config-omarchy-laptop/        ← Omarchy + laptop profile
+  config-omarchy-laptop-t14/    ← Omarchy + laptop profile + machine model
   git/                          ← git config
   zsh/                          ← shell config
   bin/                          ← personal scripts
@@ -191,11 +213,14 @@ The `private: true` flag tells dotlayer which repo to use when you run `dotlayer
   fonts/                        ← licensed fonts
   fonts-linux/                  ← Linux-specific font config
   claude/                       ← standalone: Claude AI config
-  work/                         ← standalone: work tooling
+  work/                         ← group package: work tooling
   scripts/                      ← standalone: work automation scripts
 ```
 
-Directories that match the per-repo base packages (`config`, `fonts`) get full layer resolution. Everything else (`claude`, `work`, `scripts`) is stowed as-is in alphabetical order.
+Directories that match the per-repo base packages (`config`, `fonts`) get full layer resolution. If `standalone_packages`
+is omitted, every other top-level directory (`claude`, `scripts`) is stowed as-is in alphabetical order. If it is present,
+only those allowlisted standalone packages are stowed. Exact work packages can be gated behind detected groups with
+`group_packages`.
 
 ### Adopting files into the right repo
 
@@ -216,6 +241,7 @@ Repos are processed in order. Public packages are stowed first, then private pac
 3. `~/.public_dotfiles/config-omarchy/` — distro layer
 4. `~/.private_dotfiles/config/` — private overlays (stowed after public)
 5. `~/.private_dotfiles/config-mycompany/` — work group layer
+6. `~/.private_dotfiles/work/` — exact group package, if configured
 
 Each layer adds files — they never conflict because different layers use different file paths within the same directory structure.
 
@@ -241,7 +267,7 @@ Commands:
 
 Options:
   -c, --config PATH   Config file path
-  -n, --dry-run       Show what would be done without making changes
+  -n, --dry-run       Run stow in no-op mode to preview changes and conflicts
   -p, --private       Use private repo (for adopt command)
   -v, --verbose       Verbose output
 ```

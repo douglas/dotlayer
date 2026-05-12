@@ -50,6 +50,34 @@ class ResolverTest < Minitest::Test
     refute_includes packages, "config-omarchy-laptop"
   end
 
+  def test_resolves_machine_layers_after_profile_layers
+    create_dirs(
+      "config",
+      "config-linux",
+      "config-omarchy",
+      "config-omarchy-laptop",
+      "config-t14",
+      "config-linux-t14",
+      "config-omarchy-t14",
+      "config-omarchy-laptop-t14"
+    )
+    config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])
+    detection = build_detection(profile: "laptop", machine: "t14", distros: ["omarchy"])
+
+    packages = resolve(config, detection)
+
+    assert_equal %w[
+      config
+      config-linux
+      config-omarchy
+      config-omarchy-laptop
+      config-t14
+      config-linux-t14
+      config-omarchy-t14
+      config-omarchy-laptop-t14
+    ], packages
+  end
+
   def test_layer_order_is_os_then_distro_then_distro_profile
     create_dirs("config", "config-linux", "config-omarchy", "config-omarchy-desktop")
     config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])
@@ -92,6 +120,34 @@ class ResolverTest < Minitest::Test
 
     assert_includes packages, "config-mycompany"
     refute_includes packages, "config-acme"
+  end
+
+  def test_resolves_group_packages_from_repo_policy
+    create_dirs("config", "doximity", "jobber")
+    repo = build_repo(
+      path: @tmpdir,
+      standalone_packages: [],
+      group_packages: {
+        "doximity" => ["doximity"],
+        "jobber" => ["jobber"]
+      }
+    )
+    config = stub_config(repos: [repo], packages: %w[config])
+
+    packages = resolve(config, build_detection(groups: ["doximity"]))
+
+    assert_includes packages, "doximity"
+    refute_includes packages, "jobber"
+  end
+
+  def test_explicit_standalone_policy_limits_standalone_packages
+    create_dirs("config", "bin", "claude", "doximity")
+    repo = build_repo(path: @tmpdir, standalone_packages: %w[bin claude])
+    config = stub_config(repos: [repo], packages: %w[config])
+
+    packages = resolve(config, build_detection)
+
+    assert_equal %w[config bin claude], packages
   end
 
   def test_groups_come_after_distro_profile_layers

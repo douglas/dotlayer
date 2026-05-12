@@ -51,10 +51,24 @@ class CLITest < Minitest::Test
   end
 
   def test_dry_run_flag_forwarded_to_install
-    output = capture_io {
-      Dotlayer::CLI.new.run(["-c", "/nonexistent/dotlayer.yml", "-n", "install"])
-    }.first
+    Dir.mktmpdir do |dir|
+      repo = File.join(dir, "repo")
+      target = File.join(dir, "home")
+      config_path = File.join(dir, "dotlayer.yml")
+      FileUtils.mkdir_p([File.join(repo, "config"), target])
+      File.write(config_path, <<~YAML)
+        target: #{target}
+        repos:
+          - path: #{repo}
+        packages:
+          - config
+      YAML
 
-    assert_match(/dry-run/, output)
+      output = capture_io {
+        Dotlayer::CLI.new.run(["-c", config_path, "-n", "install"])
+      }.first
+
+      assert_match(/dry-run/, output)
+    end
   end
 end

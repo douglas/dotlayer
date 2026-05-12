@@ -1,7 +1,7 @@
 require "open3"
 
 module Dotlayer
-  Detection = Data.define(:os, :profile, :distros, :groups)
+  Detection = Data.define(:os, :profile, :machine, :distros, :groups)
 
   class Detector
     def initialize(config: Config.new)
@@ -9,7 +9,13 @@ module Dotlayer
     end
 
     def detect
-      Detection.new(os: detect_os, profile: detect_profile, distros: detect_distros, groups: detect_groups)
+      Detection.new(
+        os: detect_os,
+        profile: detect_profile,
+        machine: detect_machine,
+        distros: detect_distros,
+        groups: detect_groups
+      )
     end
 
     private
@@ -34,6 +40,23 @@ module Dotlayer
       "desktop"
     end
 
+    def detect_machine
+      from_env = ENV[@config.machine_env]
+      return normalize_tag(from_env) if from_env && !from_env.empty?
+
+      detected = @config.machines.find do |name, entry|
+        next false if name == "env"
+
+        command_detected?(entry)
+      end
+      return normalize_tag(detected.first) if detected
+
+      output, status = Open3.capture2("hostname", "-s", err: File::NULL)
+      return normalize_tag(output) if status.success? && !output.strip.empty?
+
+      "unknown"
+    end
+
     def detect_distros
       @config.distros.select { |_name, entry| command_detected?(entry) }.keys
     end
@@ -48,6 +71,10 @@ module Dotlayer
 
       _, status = Open3.capture2e("sh", "-c", cmd)
       status.success?
+    end
+
+    def normalize_tag(value)
+      value.to_s.strip.downcase.gsub(/[^a-z0-9_-]+/, "-").gsub(/\A-+|-+\z/, "")
     end
   end
 end

@@ -19,6 +19,7 @@ class StatusTest < Minitest::Test
 
     assert_match(/OS:.*linux/, output)
     assert_match(/Profile:.*desktop/, output)
+    assert_match(/Machine:.*test-machine/, output)
     assert_match(/Distros:.*omarchy/, output)
     assert_match(/Groups:.*mycompany/, output)
     assert_match(/config/, output)

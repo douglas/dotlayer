@@ -23,6 +23,7 @@ module Dotlayer
         heading "System Detection"
         puts "  OS:         #{detection.os}"
         puts "  Profile:    #{detection.profile}"
+        puts "  Machine:    #{detection.machine}"
         puts "  Distros:    #{detection.distros.empty? ? "(none)" : detection.distros.join(", ")}"
         puts "  Groups:     #{detection.groups.empty? ? "(none)" : detection.groups.join(", ")}"
         puts

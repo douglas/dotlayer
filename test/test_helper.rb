@@ -17,12 +17,12 @@ module TestConfigHelper
     config
   end
 
-  def build_repo(path:, private: false, packages: nil)
-    Dotlayer::Repo.new(path: path, private: private, packages: packages)
+  def build_repo(path:, private: false, packages: nil, standalone_packages: nil, group_packages: {})
+    Dotlayer::Repo.new(path:, private:, packages:, standalone_packages:, group_packages:)
   end
 
-  def build_detection(os: "linux", profile: "desktop", distros: [], groups: [])
-    Dotlayer::Detection.new(os:, profile:, distros:, groups:)
+  def build_detection(os: "linux", profile: "desktop", machine: "test-machine", distros: [], groups: [])
+    Dotlayer::Detection.new(os:, profile:, machine:, distros:, groups:)
   end
 
   def stub_detector(detection = build_detection)

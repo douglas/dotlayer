@@ -1,7 +1,7 @@
 require "yaml"
 
 module Dotlayer
-  Repo = Data.define(:path, :private, :packages)
+  Repo = Data.define(:path, :private, :packages, :standalone_packages, :group_packages)
 
   class Config
     DEFAULT_PACKAGES = %w[stow bin git zsh config].freeze
@@ -30,7 +30,9 @@ module Dotlayer
         Repo.new(
           path: File.expand_path(path),
           private: entry["private"] || false,
-          packages: entry["packages"]&.freeze
+          packages: entry["packages"]&.freeze,
+          standalone_packages: entry["standalone_packages"]&.freeze,
+          group_packages: entry["group_packages"] || {}
         )
       end.freeze
     end
@@ -53,6 +55,14 @@ module Dotlayer
 
     def groups
       @data.fetch("groups", {})
+    end
+
+    def machines
+      @data.fetch("machines", {})
+    end
+
+    def machine_env
+      @data.dig("machines", "env") || "DOTLAYER_MACHINE"
     end
 
     def system_files

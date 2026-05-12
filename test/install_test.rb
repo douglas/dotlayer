@@ -50,6 +50,22 @@ class InstallTest < Minitest::Test
       "stow should create file symlinks in target"
   end
 
+  def test_stow_failure_aborts_before_system_files
+    File.write(File.join(@target, ".config"), "conflict")
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo)],
+      packages: %w[config],
+      system_files: [{"source" => "config/etc/test.conf", "dest" => "/tmp/test.conf"}]
+    )
+
+    assert_raises(SystemExit) do
+      capture_io {
+        Dotlayer::Commands::Install.new(config:, detector: stub_detector).run
+      }
+    end
+  end
+
   def test_skips_system_files_when_no_repos
     config = stub_config(
       target: @target,

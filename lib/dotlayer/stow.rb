@@ -14,6 +14,7 @@ module Dotlayer
 
     def restow(repo_path, package)
       args = ["stow", "-R", "--no-folding"]
+      args << "-n" if @dry_run
       args << "-v" if @verbose
       args << "-d" << repo_path
       args << "-t" << @target
@@ -22,8 +23,6 @@ module Dotlayer
       if @verbose || @dry_run
         warn "  #{args.join(" ")}"
       end
-
-      return true if @dry_run
 
       output, status = Open3.capture2e(*args)
       @last_error = status.success? ? nil : output.strip

@@ -73,6 +73,21 @@ class UpdateTest < Minitest::Test
       "stow should create file symlinks after update"
   end
 
+  def test_restow_failure_aborts
+    File.write(File.join(@target, ".config"), "conflict")
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo)],
+      packages: %w[config]
+    )
+
+    assert_raises(SystemExit) do
+      capture_io {
+        Dotlayer::Commands::Update.new(config:, detector: stub_detector).run
+      }
+    end
+  end
+
   def test_pull_failure_shows_error
     # Create a repo with a remote that will fail to pull
     remote = File.join(@tmpdir, "remote")

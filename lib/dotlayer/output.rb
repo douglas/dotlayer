@@ -38,12 +38,12 @@ module Dotlayer
 
     def restow_package(stow, repo_path, package, verb: "Stowing")
       print "  #{verb} #{green(package)}... "
-      if stow.dry_run?
-        warning("dry-run")
-      elsif stow.restow(repo_path, package)
-        ok
+      if stow.restow(repo_path, package)
+        stow.dry_run? ? warning("dry-run") : ok
+        true
       else
         error("failed: #{stow.last_error}")
+        false
       end
     end
   end

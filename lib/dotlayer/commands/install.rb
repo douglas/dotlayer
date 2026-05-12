@@ -16,12 +16,14 @@ module Dotlayer
         packages = resolver.resolve
         stow = Stow.new(target: @config.target, dry_run: @dry_run, verbose: @verbose)
 
-        heading "Installing dotfiles (#{detection.os}/#{detection.profile})"
+        heading "Installing dotfiles (#{detection.os}/#{detection.profile}/#{detection.machine})"
         puts
 
-        packages.each do |repo_path, package|
-          restow_package(stow, repo_path, package)
+        failures = packages.count do |repo_path, package|
+          !restow_package(stow, repo_path, package)
         end
+
+        abort_failed_packages(failures) if failures.positive?
 
         install_system_files if detection.os == "linux"
 
@@ -30,6 +32,11 @@ module Dotlayer
       end
 
       private
+
+      def abort_failed_packages(failures)
+        puts
+        abort "Error: #{failures} package(s) failed to stow."
+      end
 
       def install_system_files
         return if @config.system_files.empty?

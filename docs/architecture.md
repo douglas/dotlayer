@@ -8,7 +8,7 @@ Dotlayer solves one problem: given a dotfiles repo with directories named by con
 
 The system breaks into three phases:
 
-1. **Detect** — identify the current machine (OS, hardware profile, Linux distro, groups)
+1. **Detect** — identify the current machine (OS, hardware profile, machine tag, Linux distro, groups)
 2. **Resolve** — scan directories, match against detection, produce an ordered stow list
 3. **Execute** — run GNU Stow for each resolved package
 
@@ -18,6 +18,7 @@ The system breaks into three phases:
 │          │     │          │     │          │
 │ OS       │     │ Scan dirs│     │ stow -R  │
 │ Profile  │     │ Match    │     │          │
+│ Machine  │     │ Order    │     │          │
 │ Distros  │     │ Order    │     │          │
 │ Groups   │     │          │     │          │
 └──────────┘     └──────────┘     └──────────┘
@@ -51,11 +52,12 @@ The codebase follows a four-layer architecture with unidirectional data flow. Lo
 ┌─────────────────────────────────────────────────────┐
 │                    DOMAIN                            │
 │                                                      │
-│  Detection     Value object (os, profile, distros,   │
-│                  groups)                              │
+│  Detection     Value object (os, profile, machine,    │
+│                  distros, groups)                     │
 │  Detector      Produces Detection from system state  │
 │  Config        Loads YAML, provides typed accessors  │
-│  Repo          Value object (path, private, packages)│
+│  Repo          Value object (path, private, packages,│
+│                  standalone/group package policy)     │
 │  Resolver      Matches dirs against Detection        │
 │  Output        Colored terminal output helpers       │
 └──────────────────────┬──────────────────────────────┘
@@ -78,23 +80,27 @@ The codebase follows a four-layer architecture with unidirectional data flow. Lo
 ### Detection (value object)
 
 ```ruby
-Detection = Data.define(:os, :profile, :distros, :groups)
+Detection = Data.define(:os, :profile, :machine, :distros, :groups)
 ```
 
 Immutable value object produced by `Detector`. Carries the machine identity through the system. Uses Ruby 3.2+ `Data.define` — frozen by default, structural equality, pattern matching support.
 
 **os** — `"linux"`, `"macos"`, or `"unknown"`, detected from `RbConfig::CONFIG["host_os"]`
 **profile** — `"desktop"` or `"laptop"`, from `hostnamectl chassis` or `$DOTLAYER_PROFILE`
+**machine** — stable machine tag, from `$DOTLAYER_MACHINE`, configured `machines.<tag>.detect`, then `hostname -s`
 **distros** — array of detected distro names, e.g. `["omarchy"]`
 **groups** — array of detected group names, e.g. `["mycompany"]`
 
 ### Repo (value object)
 
 ```ruby
-Repo = Data.define(:path, :private, :packages)
+Repo = Data.define(:path, :private, :packages, :standalone_packages, :group_packages)
 ```
 
-Immutable value object representing a dotfiles repository. `private` marks it for sensitive configs. `packages` optionally overrides the global package list for this repo.
+Immutable value object representing a dotfiles repository. `private` marks it for sensitive configs.
+`packages` optionally overrides the global package list for this repo. `standalone_packages`
+optionally allowlists exact non-layered package names. `group_packages` maps detected group names
+to exact packages that should only be stowed for that group.
 
 ### Detector
 
@@ -103,11 +109,15 @@ Produces a `Detection` by probing the system. Each detection axis has a fallback
 ```
 OS:       RbConfig host_os → pattern match → "unknown"
 Profile:  ENV var → shell command → "desktop"
+Machine:  ENV var → configured shell commands → hostname -s → "unknown"
 Distros:  for each configured distro, run detect command → collect successes
 Groups:   for each configured group, run detect command → collect successes
 ```
 
-Distro and group detection is config-driven. Each entry in `dotlayer.yml` has a `detect` shell command. The command runs via `Open3.capture2e("sh", "-c", cmd)` and the entry is considered present if the exit code is 0.
+Machine, distro, and group detection is config-driven. Each entry in `dotlayer.yml` has a `detect`
+shell command. The command runs via `Open3.capture2e("sh", "-c", cmd)` and the entry is considered
+present if the exit code is 0. Machine detection returns the first matching configured tag; distro
+and group detection collect all matching tags.
 
 Guard clause: commands must be a non-empty `String`; nil, empty, and non-string values are silently skipped.
 
@@ -124,6 +134,8 @@ When no config file exists, defaults produce the same behavior as a vanilla dotf
 | `packages` | `%w[stow bin git zsh config]` |
 | `profile_detect` | `"hostnamectl chassis"` |
 | `profile_env` | `"DOTLAYER_PROFILE"` |
+| `machines` | `{}` |
+| `machine_env` | `"DOTLAYER_MACHINE"` |
 | `distros` | `{}` |
 | `groups` | `{}` |
 | `system_files` | `[]` |
@@ -155,8 +167,14 @@ Per-repo `packages` override the global package list for that repo.
 2. OS layer             config-linux
 3. Distro layer         config-omarchy
 4. Distro + profile     config-omarchy-desktop
-5. Group layer          config-mycompany
-6. Standalone dirs      claude, scripts (alphabetical)
+5. Machine layer        config-t14
+6. OS + machine         config-linux-t14
+7. Distro + machine     config-omarchy-t14
+8. Distro + profile + machine
+                         config-omarchy-laptop-t14
+9. Group layer          config-mycompany
+10. Group packages      work, employer-tools (configured)
+11. Standalone dirs     claude, scripts (alphabetical or allowlisted)
 ```
 
 The algorithm uses suffix matching on directory names:
@@ -166,13 +184,28 @@ case dir
 when suffix("-#{detection.os}")                       # OS layer
 when suffix("-#{distro}")                             # distro layer
 when suffix("-#{distro}-#{detection.profile}")        # distro+profile layer
+when suffix("-#{detection.machine}")                  # machine layer
+when suffix("-#{detection.os}-#{detection.machine}")  # os+machine layer
+when suffix("-#{distro}-#{detection.machine}")        # distro+machine layer
+when suffix("-#{distro}-#{detection.profile}-#{detection.machine}")
+                                                        # distro+profile+machine layer
 when suffix("-#{group}")                              # group layer
 end
 ```
 
-Directories are grouped by layer, then concatenated in order. This guarantees that OS packages are stowed before distro packages, distro before distro+profile, and distro+profile before groups.
+Directories are grouped by layer, then concatenated in order. This guarantees that broad packages
+are stowed before narrower overrides: OS before distro, distro before distro+profile, profile before
+machine, and machine-specific packages before group overlays.
 
 **Layer variant detection:** A directory like `config-fedora` is recognized as a layer variant of `config` by checking `dir.start_with?("#{pkg}-")`. This prevents standalone resolution from picking it up. Importantly, `configure` is NOT a variant of `config` — the `-` separator is required.
+
+**Standalone policy:** A repo can set `standalone_packages`. When present, only those exact
+standalone packages are appended. When omitted, unmatched standalone directories are appended
+alphabetically to preserve the original convention.
+
+**Group package policy:** A repo can set `group_packages` to map a detected group to exact package
+names. This is for private packages like `doximity` or `jobber` that should not be stowed unless the
+matching group is detected and that do not use a suffix such as `config-doximity`.
 
 **Why order matters:** GNU Stow uses "tree folding" — the first package to provide a directory gets a symlink to the whole directory. Later packages that add files to the same directory cause stow to "unfold" the tree into individual file symlinks. Processing in layer order ensures the base config is established first.
 
@@ -184,7 +217,8 @@ Thin wrapper around the `stow` CLI. Provides a single operation:
 
 Returns `true` on success, `false` on failure. On failure, `last_error` contains the error output. On success, `last_error` is cleared to `nil`.
 
-Supports `dry_run:` (prints command to stderr, returns true without executing) and `verbose:` (adds `-v` flag and prints command to stderr).
+Supports `dry_run:` (adds Stow's `-n` flag so conflicts are checked without changing links) and
+`verbose:` (adds `-v` flag and prints command to stderr).
 
 Catches `Errno::ENOENT` when the `stow` binary is not installed and sets a descriptive error message.
 
@@ -223,6 +257,7 @@ argv = ["install"]
        │       │
        │       ▼
        │    Detection(os: "linux", profile: "desktop",
+       │             machine: "framework-desktop",
        │             distros: ["omarchy"], groups: ["mycompany"])
        │
        ├──▶ Resolver.new(config:, detection:).resolve
@@ -236,6 +271,7 @@ argv = ["install"]
        │     ["~/.public_dotfiles", "config-linux"],
        │     ["~/.public_dotfiles", "config-omarchy"],
        │     ["~/.public_dotfiles", "config-omarchy-desktop"],
+       │     ["~/.public_dotfiles", "config-omarchy-framework-desktop"],
        │     ["~/.public_dotfiles", "config-mycompany"]]
        │
        ├──▶ Stow.new(target:).restow(repo, pkg) for each package

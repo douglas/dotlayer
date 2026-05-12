@@ -8,8 +8,10 @@ class ConfigTest < Minitest::Test
     assert_equal %w[stow bin git zsh config], config.packages
     assert_equal "hostnamectl chassis", config.profile_detect
     assert_equal "DOTLAYER_PROFILE", config.profile_env
+    assert_equal "DOTLAYER_MACHINE", config.machine_env
     assert_equal({}, config.distros)
     assert_equal({}, config.groups)
+    assert_equal({}, config.machines)
     assert_equal({}, config.hooks)
     assert_equal [], config.system_files
   end
@@ -97,11 +99,25 @@ class ConfigTest < Minitest::Test
         groups:
           mycompany:
             detect: test -d ~/src/mycompany
+        machines:
+          env: MY_MACHINE
+          t14:
+            detect: model="$(cat /sys/class/dmi/id/product_name 2>/dev/null)"; case "$model" in *T14*) exit 0 ;; *) exit 1 ;; esac
       YAML
 
       config = Dotlayer::Config.new(config_path)
 
       assert_equal({"mycompany" => {"detect" => "test -d ~/src/mycompany"}}, config.groups)
+      assert_equal "MY_MACHINE", config.machine_env
+      assert_equal(
+        {
+          "env" => "MY_MACHINE",
+          "t14" => {
+            "detect" => 'model="$(cat /sys/class/dmi/id/product_name 2>/dev/null)"; case "$model" in *T14*) exit 0 ;; *) exit 1 ;; esac'
+          }
+        },
+        config.machines
+      )
     end
   end
 
@@ -129,11 +145,18 @@ class ConfigTest < Minitest::Test
             packages:
               - config
               - fonts
+            standalone_packages:
+              - bin
+            group_packages:
+              mycompany:
+                - mycompany
       YAML
 
       config = Dotlayer::Config.new(config_path)
 
       assert_equal %w[config fonts], config.repos[0].packages
+      assert_equal %w[bin], config.repos[0].standalone_packages
+      assert_equal({"mycompany" => ["mycompany"]}, config.repos[0].group_packages)
     end
   end
 

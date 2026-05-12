@@ -9,10 +9,12 @@ class OutputTest < Minitest::Test
     stow.define_singleton_method(:restow) { |_repo, _pkg| false }
     stow.define_singleton_method(:last_error) { "conflict found" }
 
-    output = capture_io { restow_package(stow, "/repo", "pkg") }.first
+    result = nil
+    output = capture_io { result = restow_package(stow, "/repo", "pkg") }.first
 
     assert_match(/Stowing.*pkg/, output)
     assert_match(/failed.*conflict found/, output)
+    assert_equal false, result
   end
 
   def test_restow_package_success_branch
@@ -20,15 +22,18 @@ class OutputTest < Minitest::Test
     stow.define_singleton_method(:dry_run?) { false }
     stow.define_singleton_method(:restow) { |_repo, _pkg| true }
 
-    output = capture_io { restow_package(stow, "/repo", "pkg") }.first
+    result = nil
+    output = capture_io { result = restow_package(stow, "/repo", "pkg") }.first
 
     assert_match(/Stowing.*pkg/, output)
     assert_match(/ok/, output)
+    assert_equal true, result
   end
 
   def test_restow_package_dry_run_branch
     stow = Object.new
     stow.define_singleton_method(:dry_run?) { true }
+    stow.define_singleton_method(:restow) { |_repo, _pkg| true }
 
     output = capture_io { restow_package(stow, "/repo", "pkg") }.first
 
@@ -39,6 +44,7 @@ class OutputTest < Minitest::Test
   def test_restow_package_custom_verb
     stow = Object.new
     stow.define_singleton_method(:dry_run?) { true }
+    stow.define_singleton_method(:restow) { |_repo, _pkg| true }
 
     output = capture_io { restow_package(stow, "/repo", "pkg", verb: "Restowing") }.first
 

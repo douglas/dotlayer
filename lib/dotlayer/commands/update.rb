@@ -52,12 +52,19 @@ module Dotlayer
 
         heading "Re-stowing packages"
 
-        packages.each do |repo_path, package|
-          restow_package(stow, repo_path, package, verb: "Restowing")
+        failures = packages.count do |repo_path, package|
+          !restow_package(stow, repo_path, package, verb: "Restowing")
         end
+
+        abort_failed_packages(failures) if failures.positive?
 
         puts
         puts "Done! #{packages.size} package(s) restowed."
+      end
+
+      def abort_failed_packages(failures)
+        puts
+        abort "Error: #{failures} package(s) failed to restow."
       end
     end
   end

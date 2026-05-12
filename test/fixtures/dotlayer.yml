@@ -15,6 +15,11 @@ profiles:
   detect: hostnamectl chassis
   env: DOTLAYER_PROFILE
 
+machines:
+  env: DOTLAYER_MACHINE
+  t14:
+    detect: model="$(cat /sys/class/dmi/id/product_name /sys/class/dmi/id/product_version 2>/dev/null)"; case "$model" in *T14*) exit 0 ;; *) exit 1 ;; esac
+
 distros:
   omarchy:
     detect: test -d ~/.local/share/omarchy

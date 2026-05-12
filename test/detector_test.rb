@@ -21,6 +21,17 @@ class DetectorTest < Minitest::Test
     ENV.delete("DOTLAYER_PROFILE")
   end
 
+  def test_detect_machine_from_env
+    ENV["DOTLAYER_MACHINE"] = "ThinkPad T14"
+
+    detector = Dotlayer::Detector.new(config: Dotlayer::Config.new)
+    detection = detector.detect
+
+    assert_equal "thinkpad-t14", detection.machine
+  ensure
+    ENV.delete("DOTLAYER_MACHINE")
+  end
+
   def test_detect_profile_falls_back_to_desktop
     config = stub_config(profile_detect: "false", profile_env: "DOTLAYER_TEST_NONEXISTENT")
 
@@ -57,6 +68,15 @@ class DetectorTest < Minitest::Test
     assert_includes detection.groups, "mycompany"
   end
 
+  def test_detect_machine_with_configured_command
+    config = stub_config(machines: {"t14" => {"detect" => "true"}})
+
+    detector = Dotlayer::Detector.new(config: config)
+    detection = detector.detect
+
+    assert_equal "t14", detection.machine
+  end
+
   def test_detect_group_not_found
     config = stub_config(groups: {"acme" => {"detect" => "false"}})
 
@@ -87,6 +107,16 @@ class DetectorTest < Minitest::Test
 
       refute_includes detection.distros, "broken"
     end
+  end
+
+  def test_invalid_machine_detect_values_fall_back_to_hostname
+    config = stub_config(machines: {"broken" => {"detect" => ""}})
+
+    detector = Dotlayer::Detector.new(config: config)
+    detection = detector.detect
+
+    refute_equal "broken", detection.machine
+    refute_empty detection.machine
   end
 
   def test_empty_profile_detect_falls_back_to_desktop
