@@ -8,6 +8,7 @@ module Dotlayer
         @detector = detector || Detector.new(config: @config)
         @dry_run = dry_run
         @verbose = verbose
+        @system_failures = 0
       end
 
       def run
@@ -28,6 +29,7 @@ module Dotlayer
         install_system_files if detection.os == "linux"
 
         puts
+        abort "Error: #{@system_failures} system file(s) or hook(s) failed." if @system_failures.positive?
         puts "Done! #{packages.size} package(s) stowed."
       end
 
@@ -67,17 +69,13 @@ module Dotlayer
             next
           end
 
-          unless system("sudo", "cp", source, dest)
+          # install -D creates missing parent dirs (e.g. /etc/systemd/system-sleep).
+          if system("sudo", "install", "-D", "-m", mode || "0644", source, dest)
+            ok
+          else
+            @system_failures += 1
             error("failed")
-            next
           end
-
-          if mode && !system("sudo", "chmod", mode, dest)
-            error("chmod failed")
-            next
-          end
-
-          ok
         end
 
         run_hooks("after_system_files")
@@ -111,7 +109,10 @@ module Dotlayer
           if @dry_run
             warning("dry-run")
           else
-            system(cmd) ? ok : error("failed")
+            next ok if system(cmd)
+
+            @system_failures += 1
+            error("failed")
           end
         end
       end

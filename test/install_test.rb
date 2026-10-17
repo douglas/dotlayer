@@ -225,4 +225,58 @@ class InstallTest < Minitest::Test
   ensure
     $stdin = original_stdin
   end
+
+  def test_system_files_use_install_with_parent_dirs_and_default_mode
+    system_file = File.join(@repo, "config", "etc", "test.conf")
+    FileUtils.mkdir_p(File.dirname(system_file))
+    File.write(system_file, "content")
+
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo)],
+      packages: %w[config],
+      system_files: [{"source" => "config/etc/test.conf", "dest" => "/tmp/new-dir/test.conf"}]
+    )
+
+    original_stdin = $stdin
+    $stdin = StringIO.new("y\n")
+    commands_run = []
+    capture_io {
+      install = Dotlayer::Commands::Install.new(config:, detector: stub_detector)
+      install.define_singleton_method(:system) { |*args|
+        commands_run << args
+        true
+      }
+      install.run
+    }
+
+    assert_includes commands_run, ["sudo", "install", "-D", "-m", "0644", system_file, "/tmp/new-dir/test.conf"]
+  ensure
+    $stdin = original_stdin
+  end
+
+  def test_failed_system_file_exits_nonzero
+    system_file = File.join(@repo, "config", "etc", "test.conf")
+    FileUtils.mkdir_p(File.dirname(system_file))
+    File.write(system_file, "content")
+
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo)],
+      packages: %w[config],
+      system_files: [{"source" => "config/etc/test.conf", "dest" => "/tmp/test.conf"}]
+    )
+
+    original_stdin = $stdin
+    $stdin = StringIO.new("y\n")
+    assert_raises(SystemExit) do
+      capture_io {
+        install = Dotlayer::Commands::Install.new(config:, detector: stub_detector)
+        install.define_singleton_method(:system) { |*_args| false }
+        install.run
+      }
+    end
+  ensure
+    $stdin = original_stdin
+  end
 end
