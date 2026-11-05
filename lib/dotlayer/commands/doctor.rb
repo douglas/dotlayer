@@ -7,7 +7,7 @@ module Dotlayer
 
       DEFAULT_MAX_DEPTH = 6
       SKIP_DIRS = %w[.cache node_modules .git].freeze
-      SKIP_PATHS = %w[.local/share/Steam].freeze
+      SKIP_PATHS = %w[.local/share/Steam .local/state].freeze
 
       def initialize(config:, detector: nil, max_depth: nil)
         @config = config

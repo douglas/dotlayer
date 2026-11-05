@@ -74,6 +74,7 @@ class DoctorTest < Minitest::Test
       refute_match(/valid/, output)
       refute_match(/outside/, output)
       refute_match(/via_symlinked_dir/, output)
+      refute_match(/state_backup/, output)
       refute_match(/cache_stale/, output)
       assert_match(/1 issue/, output)
     end
@@ -196,6 +197,7 @@ class DoctorTest < Minitest::Test
       elsewhere = File.join(tmpdir, "elsewhere")
       FileUtils.mkdir_p([
         File.join(target, "projects", "a"), File.join(target, ".cache"),
+        File.join(target, ".local", "state", "app", "backups"),
         File.join(repo, "config"), elsewhere
       ])
       FileUtils.touch(File.join(repo, "config", "real"))
@@ -204,6 +206,7 @@ class DoctorTest < Minitest::Test
       File.symlink(File.join(repo, "config", "gone"), File.join(target, "projects", "a", "dangling"))
       File.symlink("/nonexistent/outside", File.join(target, "outside"))
       File.symlink(File.join(repo, "config", "gone"), File.join(target, ".cache", "cache_stale"))
+      File.symlink(File.join(repo, "config", "gone"), File.join(target, ".local", "state", "app", "backups", "state_backup"))
       File.symlink(File.join(repo, "config", "gone"), File.join(elsewhere, "via_symlinked_dir"))
       File.symlink(elsewhere, File.join(target, "linkdir"))
 

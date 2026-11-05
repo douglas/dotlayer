@@ -74,22 +74,22 @@ bundle exec rubycritic lib/
 
 ### Test suite overview
 
-94 tests, 262 assertions. Suite runs in ~1 second.
+118 tests, 361 assertions. Suite runs in ~1 second.
 
 | File | Tests | What it covers |
 |------|-------|----------------|
-| `config_test.rb` | 10 | YAML loading, defaults, repos, packages, distros, groups, hooks, system files, error handling |
-| `detector_test.rb` | 10 | OS detection, profile from env/command/fallback, distro/group detection, invalid inputs |
-| `resolver_test.rb` | 15 | Base packages, OS/distro/group layers, layer ordering, per-repo packages, standalone dirs, edge cases |
-| `cli_test.rb` | 7 | Argument parsing, command routing, version flag, dry-run forwarding, adopt validation |
+| `config_test.rb` | 11 | YAML loading, defaults, repos, packages, distros, groups, hooks, system files, error handling |
+| `detector_test.rb` | 15 | OS detection, profile from env/command/fallback, distro/group detection, invalid inputs |
+| `resolver_test.rb` | 20 | Base packages, OS/distro/group layers, layer ordering, per-repo packages, standalone dirs, edge cases |
+| `cli_test.rb` | 10 | Argument parsing, command routing, version flag, dry-run forwarding, adopt validation |
 | `adopt_test.rb` | 11 | File/directory moves, dry-run, private repo, multiple paths, error conditions |
 | `diff_test.rb` | 7 | Pending links, conflicts, stale links, system file content/mode, exit status |
-| `doctor_test.rb` | 10 | Missing repos, broken and dangling symlinks, depth cap, exit status, missing stow, missing packages, issue counting |
-| `install_test.rb` | 10 | Stow packages, dry-run, system files, hooks, macOS skip, user confirmation |
-| `update_test.rb` | 4 | Pull + restow, dry-run, skip non-git repos, pull failure handling |
+| `doctor_test.rb` | 11 | Missing repos, broken and dangling symlinks, depth cap, exit status, missing stow, missing packages, issue counting |
+| `install_test.rb` | 12 | Stow packages, dry-run, system files, hooks, macOS skip, user confirmation |
+| `update_test.rb` | 5 | Pull + restow, dry-run, skip non-git repos, pull failure handling |
 | `status_test.rb` | 4 | Detection display, package listing, multi-repo, empty distros/groups |
 | `output_test.rb` | 4 | `restow_package` output: success, failure, dry-run, custom verb |
-| `stow_test.rb` | 7 | Symlink creation, dry-run, error reporting, verbose output, missing stow binary |
+| `stow_test.rb` | 8 | Symlink creation, dry-run, error reporting, verbose output, missing stow binary |
 
 ### Test helpers
 
