@@ -190,7 +190,7 @@ Detection happens in `Detector`. Distro and group detection is config-driven —
 ```sh
 # Update VERSION in lib/dotlayer.rb
 # Commit and tag
-git tag v0.2.2
+git tag v0.3.0
 gem build dotlayer.gemspec
-gem push dotlayer-0.2.2.gem
+gem push dotlayer-0.3.0.gem
 ```
