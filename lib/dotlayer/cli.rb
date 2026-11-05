@@ -16,6 +16,7 @@ module Dotlayer
       when "status" then Commands::Status.new(config:).run
       when "install" then Commands::Install.new(config:, dry_run: options[:dry_run], verbose: options[:verbose]).run
       when "update" then Commands::Update.new(config:, dry_run: options[:dry_run], verbose: options[:verbose]).run
+      when "diff" then exit(1) unless Commands::Diff.new(config:).run
       when "doctor" then Commands::Doctor.new(config:).run
       when "adopt" then run_adopt(config:, argv:, options:)
       when "version"
@@ -63,6 +64,7 @@ module Dotlayer
           install   Detect system, stow all layers, install system files
           update    Pull repos, re-stow all layers
           status    Show detected OS, profile, distros, and packages
+          diff      Show what install would change (exit 1 if changes pending)
           doctor    Check for broken symlinks, conflicts, missing deps
           adopt     Move config into a stow package and restow
           version   Print version

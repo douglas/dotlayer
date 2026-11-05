@@ -83,6 +83,7 @@ bundle exec rubycritic lib/
 | `resolver_test.rb` | 15 | Base packages, OS/distro/group layers, layer ordering, per-repo packages, standalone dirs, edge cases |
 | `cli_test.rb` | 7 | Argument parsing, command routing, version flag, dry-run forwarding, adopt validation |
 | `adopt_test.rb` | 11 | File/directory moves, dry-run, private repo, multiple paths, error conditions |
+| `diff_test.rb` | 7 | Pending links, conflicts, stale links, system file content/mode, exit status |
 | `doctor_test.rb` | 6 | Missing repos, broken symlinks, missing stow, missing packages, issue counting |
 | `install_test.rb` | 10 | Stow packages, dry-run, system files, hooks, macOS skip, user confirmation |
 | `update_test.rb` | 4 | Pull + restow, dry-run, skip non-git repos, pull failure handling |
@@ -114,6 +115,7 @@ lib/
     stow.rb               # GNU Stow wrapper
     commands/
       adopt.rb            # dotlayer adopt
+      diff.rb             # dotlayer diff
       doctor.rb           # dotlayer doctor
       install.rb          # dotlayer install
       status.rb           # dotlayer status
@@ -124,6 +126,7 @@ test/
   cli_test.rb             # CLI routing tests
   config_test.rb          # Config loading and defaults
   detector_test.rb        # Detection logic
+  diff_test.rb            # Diff command tests
   doctor_test.rb          # Doctor command tests
   install_test.rb         # Install command tests
   output_test.rb          # Output formatting tests

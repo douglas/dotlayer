@@ -2,12 +2,13 @@ require "open3"
 
 module Dotlayer
   class Stow
-    attr_reader :last_error
+    attr_reader :last_error, :last_output
 
-    def initialize(target: "~", dry_run: false, verbose: false)
+    def initialize(target: "~", dry_run: false, verbose: false, quiet: false)
       @target = File.expand_path(target)
       @dry_run = dry_run
       @verbose = verbose
+      @quiet = quiet
     end
 
     def dry_run? = @dry_run
@@ -20,11 +21,12 @@ module Dotlayer
       args << "-t" << @target
       args << package
 
-      if @verbose || @dry_run
+      if !@quiet && (@verbose || @dry_run)
         warn "  #{args.join(" ")}"
       end
 
       output, status = Open3.capture2e(*args)
+      @last_output = output
       @last_error = status.success? ? nil : output.strip
       status.success?
     rescue Errno::ENOENT

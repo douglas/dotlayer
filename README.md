@@ -43,6 +43,9 @@ dotlayer status
 # Stow all matching packages
 dotlayer install
 
+# Preview what install would change (changes nothing)
+dotlayer diff
+
 # Pull latest changes and re-stow
 dotlayer update
 
@@ -259,6 +262,7 @@ dotlayer [options] <command>
 
 Commands:
   install     Detect system, stow all layers, install system files
+  diff        Show what install would change, without changing anything
   update      Pull repos, re-stow all layers
   status      Show detected OS, profile, distros, groups, and packages
   doctor      Check for broken symlinks, missing repos, missing stow
@@ -271,6 +275,16 @@ Options:
   -p, --private       Use private repo (for adopt command)
   -v, --verbose       Verbose output
 ```
+
+### diff
+
+Shows what `dotlayer install` would change, without changing anything. Packages are resolved exactly like `install`, then stow runs in simulate mode (`stow -n -v`). Output is grouped per package: `LINK` and `UNLINK` operations plus `CONFLICT` entries (stow aborts the whole package on conflicts). Links that already exist are not listed. Linux `system_files` are listed when the destination is missing, its content differs from the source, its mode differs, or it cannot be read (no sudo is used).
+
+```sh
+dotlayer diff
+```
+
+Exit status: `0` when nothing would change, `1` when changes are pending (so it can be used in scripts).
 
 ### adopt
 
