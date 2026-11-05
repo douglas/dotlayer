@@ -80,6 +80,31 @@ class DoctorTest < Minitest::Test
     end
   end
 
+  def test_dangling_scan_skips_other_git_checkouts
+    with_scan_fixture do |target, repo, config|
+      checkout = File.join(target, "src", "project")
+      FileUtils.mkdir_p(File.join(checkout, ".git"))
+      File.symlink(File.join(repo, "config", "gone"), File.join(checkout, "in_checkout"))
+
+      output = run_doctor(config)
+
+      refute_match(/in_checkout/, output)
+      assert_match(/1 found/, output)
+    end
+  end
+
+  def test_dangling_scan_enters_checkouts_a_package_ships_into
+    with_scan_fixture do |target, repo, config|
+      checkout = File.join(target, "work", "app")
+      FileUtils.mkdir_p([File.join(checkout, ".git"), File.join(repo, "config", "work", "app")])
+      File.symlink(File.join(repo, "config", "work", "app", "gone.yml"), File.join(checkout, "shipped_stale"))
+
+      output = run_doctor(config)
+
+      assert_match(%r{Dangling link into repo: #{checkout}/shipped_stale}, output)
+    end
+  end
+
   def test_dangling_scan_respects_max_depth
     with_scan_fixture do |_target, _repo, config|
       output = run_doctor(config, max_depth: 1)

@@ -115,6 +115,7 @@ module Dotlayer
 
       def find_dangling_repo_links(target)
         repo_roots = @config.repos.map(&:path)
+        @shipped_dirs = shipped_dirs(repo_roots)
         found = {}
         scan_dir(target, target, 0, repo_roots, found)
         found.except(*@reported_links)
@@ -143,7 +144,26 @@ module Dotlayer
         relative = path.delete_prefix("#{root}/")
         SKIP_DIRS.include?(File.basename(path)) ||
           SKIP_PATHS.include?(relative) ||
-          repo_roots.include?(path)
+          repo_roots.include?(path) ||
+          foreign_checkout?(path, relative)
+      end
+
+      # Another git checkout (~/src/*, ~/work/*) holds stow links only where a
+      # package ships files into it, so skip it otherwise. Checkouts are most
+      # of the files under a home dir, and the scan is far faster without them.
+      def foreign_checkout?(path, relative)
+        File.exist?(File.join(path, ".git")) && !@shipped_dirs.include?(relative)
+      end
+
+      # Every directory any package in the repos ships, relative to the target.
+      # Covers packages that don't apply to this machine, since their old
+      # links can still dangle here.
+      def shipped_dirs(repo_roots)
+        repo_roots.flat_map { |repo|
+          Dir.glob("*/", base: repo).flat_map do |package|
+            Dir.glob("**/", File::FNM_DOTMATCH, base: File.join(repo, package)).map { |dir| dir.chomp("/") }
+          end
+        }.to_set
       end
 
       def find_broken_symlinks(target)
