@@ -71,7 +71,7 @@ module Dotlayer
           end
         end
 
-        {links:, unlinks:, conflicts:}
+        {links:, unlinks:, conflicts: conflicts.uniq}
       end
 
       def diff_system_files

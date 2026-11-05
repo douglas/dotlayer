@@ -41,7 +41,8 @@ class DiffTest < Minitest::Test
     result, output = run_diff
 
     refute result
-    assert_match(/CONFLICT\S*\s+cannot stow/, output)
+    assert_match(/CONFLICT\S*\s+.*\.config\/test\/config\.yml/, output)
+    assert_match(/1 change\(s\) pending/, output)
     assert_equal "mine", File.read(File.join(@target, ".config", "test", "config.yml"))
   end
 
