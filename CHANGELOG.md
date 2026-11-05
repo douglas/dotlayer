@@ -2,7 +2,7 @@
 
 All notable changes to dotlayer. Versions follow [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.3.2 — 2026-11-05
 
 ### Added
 
