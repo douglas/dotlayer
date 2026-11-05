@@ -1,12 +1,21 @@
+require "shellwords"
+
 module Dotlayer
   module Commands
     class Doctor
       include Output
 
-      def initialize(config:, detector: nil)
+      DEFAULT_MAX_DEPTH = 6
+      SKIP_DIRS = %w[.cache node_modules .git].freeze
+      SKIP_PATHS = %w[.local/share/Steam].freeze
+
+      def initialize(config:, detector: nil, max_depth: nil)
         @config = config
+        @max_depth = max_depth || DEFAULT_MAX_DEPTH
         @detector = detector || Detector.new(config: @config)
         @issues = []
+        @reported_links = []
+        @hints = []
       end
 
       def run
@@ -21,6 +30,7 @@ module Dotlayer
         check_repos_exist
         check_packages_exist(@packages)
         check_broken_symlinks
+        check_dangling_repo_links
 
         puts
         if @issues.empty?
@@ -28,7 +38,9 @@ module Dotlayer
         else
           error "#{@issues.size} issue(s) found:"
           @issues.each { |issue| puts "  - #{issue}" }
+          @hints.each { |hint| puts "  #{hint}" }
         end
+        @issues.empty?
       end
 
       private
@@ -78,8 +90,60 @@ module Dotlayer
               "(deleted)"
             end
             @issues << "Broken symlink: #{link} -> #{target}"
+            @reported_links << link
           end
         end
+      end
+
+      # Report-only scan of the whole target dir for links into a configured
+      # repo whose destination no longer exists. Never follows directory
+      # symlinks and never deletes anything.
+      def check_dangling_repo_links
+        print "  Checking for dangling links into repos (depth #{@max_depth})... "
+        dangling = find_dangling_repo_links(@config.target)
+        if dangling.empty?
+          ok "none"
+          return
+        end
+
+        warning "#{dangling.size} found"
+        dangling.each do |link, target|
+          @issues << "Dangling link into repo: #{link} -> #{target}"
+        end
+        @hints << "To remove dangling links: rm #{dangling.keys.map { |link| Shellwords.escape(link) }.join(" ")}"
+      end
+
+      def find_dangling_repo_links(target)
+        repo_roots = @config.repos.map(&:path)
+        found = {}
+        scan_dir(target, target, 0, repo_roots, found)
+        found.except(*@reported_links)
+      end
+
+      def scan_dir(dir, root, depth, repo_roots, found)
+        Dir.children(dir).sort.each do |name|
+          path = File.join(dir, name)
+          if File.symlink?(path)
+            target = File.readlink(path)
+            absolute = File.expand_path(target, dir)
+            found[path] = target if into_repo?(absolute, repo_roots) && !File.exist?(path)
+          elsif File.directory?(path) && depth < @max_depth && !skip_dir?(path, root, repo_roots)
+            scan_dir(path, root, depth + 1, repo_roots, found)
+          end
+        end
+      rescue SystemCallError
+        nil
+      end
+
+      def into_repo?(path, repo_roots)
+        repo_roots.any? { |repo| path.start_with?("#{repo}/") }
+      end
+
+      def skip_dir?(path, root, repo_roots)
+        relative = path.delete_prefix("#{root}/")
+        SKIP_DIRS.include?(File.basename(path)) ||
+          SKIP_PATHS.include?(relative) ||
+          repo_roots.include?(path)
       end
 
       def find_broken_symlinks(target)

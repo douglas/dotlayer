@@ -17,7 +17,7 @@ module Dotlayer
       when "install" then Commands::Install.new(config:, dry_run: options[:dry_run], verbose: options[:verbose]).run
       when "update" then Commands::Update.new(config:, dry_run: options[:dry_run], verbose: options[:verbose]).run
       when "diff" then exit(1) unless Commands::Diff.new(config:).run
-      when "doctor" then Commands::Doctor.new(config:).run
+      when "doctor" then exit(1) unless Commands::Doctor.new(config:, max_depth: options[:depth]).run
       when "adopt" then run_adopt(config:, argv:, options:)
       when "version"
         puts "dotlayer #{VERSION}"
@@ -29,13 +29,14 @@ module Dotlayer
     private
 
     def parse_global_options(argv)
-      options = {dry_run: false, verbose: false, config: nil, private: false}
+      options = {dry_run: false, verbose: false, config: nil, private: false, depth: nil}
 
       OptionParser.new do |opts|
         opts.on("-c", "--config PATH", "Config file path") { |v| options[:config] = v }
         opts.on("-n", "--dry-run", "Show what would be done") { options[:dry_run] = true }
         opts.on("-v", "--verbose", "Verbose output") { options[:verbose] = true }
         opts.on("-p", "--private", "Use private repo") { options[:private] = true }
+        opts.on("--depth N", Integer, "Max depth for doctor's dangling-link scan") { |v| options[:depth] = v }
       end.parse!(argv)
 
       options
@@ -65,7 +66,7 @@ module Dotlayer
           update    Pull repos, re-stow all layers
           status    Show detected OS, profile, distros, and packages
           diff      Show what install would change (exit 1 if changes pending)
-          doctor    Check for broken symlinks, conflicts, missing deps
+          doctor    Check for broken symlinks, conflicts, missing deps (exit 1 on issues)
           adopt     Move config into a stow package and restow
           version   Print version
 
@@ -73,6 +74,7 @@ module Dotlayer
           -c, --config PATH   Config file path (default: dotlayer.yml in repo)
           -n, --dry-run       Show what would be done without making changes
           -p, --private       Use private repo (for adopt command)
+              --depth N       Max depth for doctor's dangling-link scan (default: 6)
           -v, --verbose       Verbose output
 
         Examples:

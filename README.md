@@ -49,7 +49,7 @@ dotlayer diff
 # Pull latest changes and re-stow
 dotlayer update
 
-# Check for broken symlinks and missing deps
+# Check for broken or dangling symlinks and missing deps
 dotlayer doctor
 
 # Move existing config into a stow package
@@ -265,7 +265,7 @@ Commands:
   diff        Show what install would change, without changing anything
   update      Pull repos, re-stow all layers
   status      Show detected OS, profile, distros, groups, and packages
-  doctor      Check for broken symlinks, missing repos, missing stow
+  doctor      Check for broken/dangling symlinks, missing repos, missing stow
   adopt       Move config files into a stow package and restow
   version     Print version
 
@@ -273,6 +273,7 @@ Options:
   -c, --config PATH   Config file path
   -n, --dry-run       Run stow in no-op mode to preview changes and conflicts
   -p, --private       Use private repo (for adopt command)
+      --depth N       Max depth for doctor's dangling-link scan (default: 6)
   -v, --verbose       Verbose output
 ```
 
@@ -285,6 +286,12 @@ dotlayer diff
 ```
 
 Exit status: `0` when nothing would change, `1` when changes are pending (so it can be used in scripts).
+
+### doctor
+
+Checks that stow is installed, repos and packages exist, and that managed config paths have no broken symlinks. It also scans the whole target dir (default `~`) for symlinks that point into a configured repo but whose target no longer exists. The scan skips `.cache`, `node_modules`, `.git`, `.local/share/Steam` and the repos themselves, never follows directory symlinks, and stops at `--depth` levels (default 6). It only reports: each dangling link is listed with its target, followed by a suggested `rm` command.
+
+Exit status: `0` when no issues are found, `1` otherwise.
 
 ### adopt
 

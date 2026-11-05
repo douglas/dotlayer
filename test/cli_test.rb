@@ -43,11 +43,31 @@ class CLITest < Minitest::Test
   end
 
   def test_doctor_routes_without_error
-    output = capture_io {
-      Dotlayer::CLI.new.run(["-c", "/nonexistent/dotlayer.yml", "doctor"])
-    }.first
+    Dir.mktmpdir do |dir|
+      repo = File.join(dir, "repo")
+      FileUtils.mkdir_p([File.join(repo, "config"), File.join(dir, "home")])
+      config_path = File.join(dir, "dotlayer.yml")
+      File.write(config_path, "target: #{dir}/home\nrepos:\n  - path: #{repo}\npackages:\n  - config\n")
 
-    assert_match(/Doctor/, output)
+      output = capture_io {
+        Dotlayer::CLI.new.run(["-c", config_path, "doctor"])
+      }.first
+
+      assert_match(/Doctor/, output)
+    end
+  end
+
+  def test_doctor_exits_1_when_issues_found
+    Dir.mktmpdir do |dir|
+      config_path = File.join(dir, "dotlayer.yml")
+      File.write(config_path, "target: #{dir}\nrepos:\n  - path: #{dir}/missing\n")
+
+      error = assert_raises(SystemExit) {
+        capture_io { Dotlayer::CLI.new.run(["-c", config_path, "--depth", "2", "doctor"]) }
+      }
+
+      assert_equal 1, error.status
+    end
   end
 
   def test_dry_run_flag_forwarded_to_install

@@ -231,7 +231,7 @@ Status:  Detector → Resolver → print detection + packages
 Install: Detector → Resolver → Stow → system files → hooks
 Diff:    Detector → Resolver → Stow (simulate, parse LINK/UNLINK/conflicts) + compare system files
 Update:  pull repos (git pull --rebase) → Detector → Resolver → Stow (restow)
-Doctor:  check stow installed, repos exist, packages exist, broken symlinks
+Doctor:  check stow installed, repos exist, packages exist, broken symlinks, dangling links into repos (report only)
 Adopt:   find repo → move paths into package → Stow (restow)
 ```
 
