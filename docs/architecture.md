@@ -207,13 +207,13 @@ alphabetically to preserve the original convention.
 names. This is for private packages like `doximity` or `jobber` that should not be stowed unless the
 matching group is detected and that do not use a suffix such as `config-doximity`.
 
-**Why order matters:** GNU Stow uses "tree folding" — the first package to provide a directory gets a symlink to the whole directory. Later packages that add files to the same directory cause stow to "unfold" the tree into individual file symlinks. Processing in layer order ensures the base config is established first.
+**Why order matters:** Stow runs with `--no-folding`, so every file gets its own link and a later layer can add files to a directory an earlier layer created. Two layers can never provide the same file: Stow reports that as a conflict. Processing in layer order keeps installs and conflict reports predictable.
 
 ### Stow
 
 Thin wrapper around the `stow` CLI. Provides a single operation:
 
-- `restow(repo_path, package)` — delete + recreate symlinks (`stow -R`)
+- `restow(repo_path, package)` — delete + recreate symlinks (`stow -R --no-folding`)
 
 Returns `true` on success, `false` on failure. On failure, `last_error` contains the error output. On success, `last_error` is cleared to `nil`.
 
@@ -231,7 +231,7 @@ Status:  Detector → Resolver → print detection + packages
 Install: Detector → Resolver → Stow → system files → hooks
 Diff:    Detector → Resolver → Stow (simulate, parse LINK/UNLINK/conflicts) + compare system files
 Update:  pull repos (git pull --rebase) → Detector → Resolver → Stow (restow)
-Doctor:  check stow installed, repos exist, packages exist, broken symlinks, dangling links into repos (report only)
+Doctor:  check stow installed, repos exist, packages exist, broken symlinks, dangling links into repos (report only; skips other git checkouts unless a package ships into them)
 Adopt:   find repo → move paths into package → Stow (restow)
 ```
 

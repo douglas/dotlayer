@@ -12,10 +12,11 @@ Gem::Specification.new do |spec|
   spec.license = "O-SaaSy"
   spec.required_ruby_version = ">= 3.3"
 
-  spec.files = Dir["lib/**/*", "exe/*", "templates/*", "completions/*", "LICENSE", "README.md"]
+  spec.files = Dir["lib/**/*", "exe/*", "templates/*", "completions/*", "LICENSE", "README.md", "CHANGELOG.md"]
   spec.bindir = "exe"
   spec.executables = ["dotlayer"]
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = spec.homepage
+  spec.metadata["changelog_uri"] = "#{spec.homepage}/blob/main/CHANGELOG.md"
 end
