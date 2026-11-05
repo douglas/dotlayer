@@ -18,7 +18,7 @@ mise install    # installs the correct Ruby version
 mise trust      # trust the project config (first time only)
 ```
 
-If you don't use mise, any Ruby >= 3.2 will work.
+If you don't use mise, any Ruby >= 3.3 will work.
 
 ### Dependencies
 

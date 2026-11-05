@@ -32,7 +32,7 @@ git clone https://github.com/douglas/dotlayer.git
 export PATH="$HOME/src/dotlayer/exe:$PATH"
 ```
 
-**Requirements:** Ruby >= 3.2, GNU Stow
+**Requirements:** Ruby >= 3.3, GNU Stow
 
 ## Quick start
 

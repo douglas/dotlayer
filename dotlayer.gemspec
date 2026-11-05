@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.description = "A convention-driven CLI wrapper around GNU Stow that adds layered package resolution, auto-detection, private repo overlays, and system file management."
   spec.homepage = "https://github.com/douglas/dotlayer"
   spec.license = "O-SaaSy"
-  spec.required_ruby_version = ">= 3.2"
+  spec.required_ruby_version = ">= 3.3"
 
   spec.files = Dir["lib/**/*", "exe/*", "templates/*", "completions/*", "LICENSE", "README.md"]
   spec.bindir = "exe"
