@@ -74,7 +74,7 @@ bundle exec rubycritic lib/
 
 ### Test suite overview
 
-120 tests, 369 assertions. Suite runs in ~1 second.
+122 tests, 379 assertions. Suite runs in ~1 second.
 
 | File | Tests | What it covers |
 |------|-------|----------------|
@@ -84,7 +84,7 @@ bundle exec rubycritic lib/
 | `cli_test.rb` | 10 | Argument parsing, command routing, version flag, dry-run forwarding, adopt validation |
 | `adopt_test.rb` | 11 | File/directory moves, dry-run, private repo, multiple paths, error conditions |
 | `diff_test.rb` | 7 | Pending links, conflicts, stale links, system file content/mode, exit status |
-| `doctor_test.rb` | 13 | Missing repos, broken and dangling symlinks, depth cap, git checkout skipping, exit status, missing stow, missing packages, issue counting |
+| `doctor_test.rb` | 15 | Missing repos, broken and dangling symlinks, files no longer linked, depth cap, git checkout skipping, exit status, missing stow, missing packages, issue counting |
 | `install_test.rb` | 12 | Stow packages, dry-run, system files, hooks, macOS skip, user confirmation |
 | `update_test.rb` | 5 | Pull + restow, dry-run, skip non-git repos, pull failure handling |
 | `status_test.rb` | 4 | Detection display, package listing, multi-repo, empty distros/groups |

@@ -2,6 +2,16 @@
 
 All notable changes to dotlayer. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+
+- `doctor` reports managed files that are no longer links. Tools that save by
+  writing a temp file and renaming it, or with `sed -i`, replace a stowed link
+  with a plain file, and changes in the repo stop reaching the machine. Before,
+  only `install` noticed, by failing with conflicts. The check asks Stow in
+  simulate mode, so it follows Stow's own ignore rules.
+
 ## 0.3.1 — 2026-11-05
 
 First RubyGems release since 0.2.2: it includes everything listed under 0.3.0,

@@ -80,6 +80,39 @@ class DoctorTest < Minitest::Test
     end
   end
 
+  def test_reports_managed_file_replaced_by_plain_file
+    Dir.mktmpdir do |tmpdir|
+      target = File.join(tmpdir, "home")
+      repo = File.join(tmpdir, "repo")
+      FileUtils.mkdir_p([File.join(repo, "config", ".config", "app"), File.join(target, ".config", "app")])
+      File.write(File.join(repo, "config", ".config", "app", "settings"), "repo\n")
+      File.write(File.join(target, ".config", "app", "settings"), "rewritten by the app\n")
+      config = stub_config(target:, repos: [build_repo(path: repo)], packages: %w[config])
+
+      output = run_doctor(config)
+
+      assert_match(/1 not linked/, output)
+      assert_match(%r{repo/config: .*\.config/app/settings}, output)
+      assert_match(/dotlayer install/, output)
+    end
+  end
+
+  def test_linked_install_passes_link_check
+    Dir.mktmpdir do |tmpdir|
+      target = File.join(tmpdir, "home")
+      repo = File.join(tmpdir, "repo")
+      FileUtils.mkdir_p([File.join(repo, "config", ".config", "app"), target])
+      File.write(File.join(repo, "config", ".config", "app", "settings"), "repo\n")
+      Dotlayer::Stow.new(target:).restow(repo, "config")
+      config = stub_config(target:, repos: [build_repo(path: repo)], packages: %w[config])
+
+      output = run_doctor(config)
+
+      assert_match(/still links\.\.\. .*yes/, output)
+      assert_match(/No issues found/, output)
+    end
+  end
+
   def test_dangling_scan_skips_other_git_checkouts
     with_scan_fixture do |target, repo, config|
       checkout = File.join(target, "src", "project")

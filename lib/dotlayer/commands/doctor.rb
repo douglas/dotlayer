@@ -30,6 +30,7 @@ module Dotlayer
         check_repos_exist
         check_packages_exist(@packages)
         check_broken_symlinks
+        check_unlinked_files
         check_dangling_repo_links
 
         puts
@@ -47,7 +48,7 @@ module Dotlayer
 
       def check_stow_installed
         print "  Checking stow... "
-        if system("which", "stow", out: File::NULL, err: File::NULL)
+        if (@stow_installed = system("which", "stow", out: File::NULL, err: File::NULL))
           ok "installed"
         else
           error "missing"
@@ -93,6 +94,35 @@ module Dotlayer
             @reported_links << link
           end
         end
+      end
+
+      # Tools that save by writing a temp file and renaming it (or `sed -i`)
+      # replace a stowed link with a plain file, and the repo stops reaching
+      # the machine. Stow's simulate mode reports those as conflicts, so ask
+      # it instead of re-implementing its ignore rules.
+      def check_unlinked_files
+        return unless @stow_installed
+
+        print "  Checking that managed files are still links... "
+        stow = Stow.new(target: @config.target, dry_run: true, quiet: true)
+        conflicts = @packages.flat_map { |repo_path, package|
+          next [] if !Dir.exist?(File.join(repo_path, package)) || stow.restow(repo_path, package)
+
+          conflicts = stow.last_output.to_s.each_line(chomp: true).filter_map { |line| Diff::CONFLICT_LINE.match(line)&.[](1) }
+          conflicts = [stow.last_error] if conflicts.empty?
+          conflicts.map { |conflict| [repo_path, package, conflict] }
+        }
+
+        if conflicts.empty?
+          ok "yes"
+          return
+        end
+
+        warning "#{conflicts.size} not linked"
+        conflicts.each do |repo_path, package, conflict|
+          @issues << "#{File.basename(repo_path)}/#{package}: #{conflict}"
+        end
+        @hints << "Compare each file with its repo copy (dotlayer diff lists them), keep what you need, delete the plain file, then run dotlayer install."
       end
 
       # Report-only scan of the whole target dir for links into a configured
