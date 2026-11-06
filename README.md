@@ -272,11 +272,21 @@ Commands:
 Options:
   -c, --config PATH   Config file path
   -n, --dry-run       Run stow in no-op mode to preview changes and conflicts
+      --backup        Install: delete identical blocking files, move different ones aside
   -y, --yes           Answer yes to install prompts (required without a terminal)
   -p, --private       Use private repo (for adopt command)
       --depth N       Max depth for doctor's dangling-link scan (default: 6)
   -v, --verbose       Verbose output
 ```
+
+### install --backup
+
+Stow refuses to link over a real file, or over a link that points outside your repos (an Omarchy theme link, say). When `install` fails with conflicts it suggests `--backup`. With it, before stowing each package, `install` looks at every file the package ships:
+
+- a real file identical to the repo copy is deleted, and stow links it;
+- anything else (a different file, or a link into some other place) is moved to `~/dotfiles-conflicts-<YYYYmmdd-HHMMSS>/`, keeping its relative path. The folder is created only when something moves, once per run.
+
+Each action is printed, followed by a summary with the backup folder. Links into a configured repo (including through a folded parent directory) and real directories are left alone. Stow's ignore rules are not re-implemented: a simulated stow run decides which paths it would really refuse, so files stow ignores are never touched. Compare the backups with the live links, copy back what you want, and delete the folder; it may hold local secrets. With `--dry-run`, `--backup` only prints what it would do. Without `--backup`, nothing changes.
 
 ### install and system files
 

@@ -3,6 +3,7 @@ module Dotlayer
 
   autoload :CLI, "dotlayer/cli"
   autoload :Config, "dotlayer/config"
+  autoload :ConflictBackup, "dotlayer/conflict_backup"
   autoload :Detection, "dotlayer/detector"
   autoload :Detector, "dotlayer/detector"
   autoload :Output, "dotlayer/output"

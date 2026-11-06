@@ -6,6 +6,13 @@ All notable changes to dotlayer. Versions follow [Semantic Versioning](https://s
 
 ### Added
 
+- `install --backup` clears what stow would refuse to overwrite before it
+  stows each package. A real file identical to the repo copy is deleted; a
+  different file, or a link pointing outside the configured repos, is moved to
+  `~/dotfiles-conflicts-<timestamp>/` with its relative path. Each action and a
+  summary are printed. `--dry-run` only reports. Stow's own ignore rules still
+  apply, because a stow simulation decides which paths it would refuse.
+- `install` suggests `--backup` when a package fails with conflicts.
 - `install -y`/`--yes` answers yes to the system-file and hook prompts.
 
 ### Changed

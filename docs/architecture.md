@@ -239,6 +239,8 @@ Commands accept `config:`, `detector:`, `dry_run:`, `verbose:` via constructor i
 
 **Install** also handles system files (Linux only, requires sudo with user confirmation) and post-install hooks (also require user confirmation). `SystemFiles.pending` (shared with `diff`) decides which entries differ from disk; only those are installed, and hooks run only when something was installed. `--yes` answers the prompts; without a TTY and without `--yes`, nothing is installed and the user is told to rerun with `--yes`. In dry-run mode nothing runs under sudo.
 
+**ConflictBackup** (`install --backup`) runs before each package is stowed. It walks the package dir for candidate files, keeps those whose path under the target is a real file or a link pointing outside the configured repos, and asks a stow simulation which of them stow would refuse (so stow's ignore rules apply without being copied). Identical real files are deleted; the rest move to a per-run `~/dotfiles-conflicts-<timestamp>/`.
+
 **Adopt** finds the appropriate repo (private if `-p` flag, else first repo with the package, else first repo), moves each path into the package preserving the directory structure relative to target, then restows.
 
 ## Data flow
@@ -324,6 +326,7 @@ test/
   update_test.rb      # Pull repos + restow, dry-run, error handling
   status_test.rb      # Detection display, package listing
   output_test.rb      # restow_package branching (success/failure/dry-run)
+  conflict_backup_test.rb  # install --backup: delete identical, move different, skips
   stow_test.rb        # Symlink creation, dry-run, verbose, error reporting
 ```
 

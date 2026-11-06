@@ -66,6 +66,47 @@ class InstallTest < Minitest::Test
     end
   end
 
+  def test_conflict_failure_hints_at_backup
+    live = File.join(@target, ".config", "test", "config.yml")
+    FileUtils.mkdir_p(File.dirname(live))
+    File.write(live, "mine")
+
+    output = capture_io {
+      assert_raises(SystemExit) { Dotlayer::Commands::Install.new(config: package_config, detector: stub_detector).run }
+    }.first
+
+    assert_match(/Rerun with --backup/, output)
+  end
+
+  def test_backup_clears_conflicts_then_stows
+    live = File.join(@target, ".config", "test", "config.yml")
+    FileUtils.mkdir_p(File.dirname(live))
+    File.write(live, "mine")
+
+    output = capture_io {
+      Dotlayer::Commands::Install.new(config: package_config, detector: stub_detector, backup: true).run
+    }.first
+
+    assert File.symlink?(live)
+    assert_match(/moving to backup: \.config\/test\/config\.yml/, output)
+    assert_equal "mine", File.read(Dir.glob(File.join(@target, "dotfiles-conflicts-*", ".config", "test", "config.yml")).first)
+    refute_match(/Rerun with --backup/, output)
+  end
+
+  def test_backup_dry_run_reports_without_failing_or_changing_anything
+    live = File.join(@target, ".config", "test", "config.yml")
+    FileUtils.mkdir_p(File.dirname(live))
+    File.write(live, "mine")
+
+    output = capture_io {
+      Dotlayer::Commands::Install.new(config: package_config, detector: stub_detector, dry_run: true, backup: true).run
+    }.first
+
+    assert_match(/would move to backup/, output)
+    assert_equal "mine", File.read(live)
+    assert_empty Dir.glob(File.join(@target, "dotfiles-conflicts-*"))
+  end
+
   def test_skips_system_files_when_no_repos
     config = stub_config(
       target: @target,
@@ -346,6 +387,10 @@ class InstallTest < Minitest::Test
   # Writes each name's source in the repo; "same" bodies are also written to
   # dest, so they are up to date. Other names have no dest yet, unless the test
   # writes one.
+  def package_config
+    stub_config(target: @target, repos: [build_repo(path: @repo)], packages: %w[config])
+  end
+
   def system_files_config(**bodies)
     etc = File.join(@repo, "config", "etc")
     FileUtils.mkdir_p(etc)

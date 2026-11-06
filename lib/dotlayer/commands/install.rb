@@ -3,12 +3,13 @@ module Dotlayer
     class Install
       include Output
 
-      def initialize(config:, detector: nil, dry_run: false, verbose: false, yes: false)
+      def initialize(config:, detector: nil, dry_run: false, verbose: false, yes: false, backup: false)
         @config = config
         @detector = detector || Detector.new(config: @config)
         @dry_run = dry_run
         @verbose = verbose
         @yes = yes
+        @backup = backup
         @system_failures = 0
       end
 
@@ -21,9 +22,11 @@ module Dotlayer
         heading "Installing dotfiles (#{detection.os}/#{detection.profile}/#{detection.machine})"
         puts
 
+        conflicts = ConflictBackup.new(config: @config, dry_run: @dry_run) if @backup
         failures = packages.count do |repo_path, package|
-          !restow_package(stow, repo_path, package)
+          !install_package(stow, conflicts, repo_path, package)
         end
+        conflicts&.summary
 
         abort_failed_packages(failures) if failures.positive?
 
@@ -36,8 +39,24 @@ module Dotlayer
 
       private
 
+      def install_package(stow, conflicts, repo_path, package)
+        resolved = conflicts&.resolve(repo_path, package)
+        if @dry_run && resolved&.positive?
+          print "  Stowing #{green(package)}... "
+          warning("dry-run, after the conflicts above are cleared")
+          return true
+        end
+
+        success = restow_package(stow, repo_path, package)
+        @conflict_failed ||= !success && stow.last_error.to_s.each_line.any? { |l| Diff::CONFLICT_LINE.match?(l.chomp) }
+        success
+      end
+
       def abort_failed_packages(failures)
         puts
+        if @conflict_failed && !@backup
+          warning "Files in the way? Rerun with --backup to delete identical ones and move different ones to ~/dotfiles-conflicts-<time>/."
+        end
         abort "Error: #{failures} package(s) failed to stow."
       end
 
