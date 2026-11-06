@@ -9,9 +9,14 @@ module Dotlayer
     end
   end
 
+  # A repo `update` pulls without stowing it; `after` runs in it when the pull
+  # brought new commits.
+  PullRepo = Data.define(:path, :after)
+
   class Config
     DEFAULT_PACKAGES = %w[stow bin git zsh config].freeze
     PACKAGE_KEYS = %w[name target].freeze
+    PULL_KEYS = %w[path after].freeze
     ENV_CONFIG = "DOTLAYER_CONFIG".freeze
     # Checked in order, after $DOTLAYER_CONFIG. The two dotfiles-repo paths are
     # where a stowed ~/.config/dotlayer/dotlayer.yml lives before it is linked.
@@ -44,6 +49,14 @@ module Dotlayer
 
         build_repo(entry, path)
       end.freeze
+    end
+
+    def pull_repos
+      @pull_repos ||= begin
+        list = @data.fetch("pull", [])
+        abort "Error: pull in #{@path} must be a list" unless list.is_a?(Array)
+        list.map { |entry| parse_pull(entry) }.freeze
+      end
     end
 
     def packages
@@ -114,6 +127,22 @@ module Dotlayer
     def validate_packages
       packages
       repos
+      pull_repos
+    end
+
+    def parse_pull(entry)
+      abort "Error: pull in #{@path}: each entry must be a {path:, after:} mapping, got #{entry.inspect}" unless entry.is_a?(Hash)
+
+      unknown = entry.keys - PULL_KEYS
+      abort "Error: pull in #{@path}: unknown key(s) #{unknown.join(", ")} (allowed: #{PULL_KEYS.join(", ")})" if unknown.any?
+
+      path, after = entry.values_at("path", "after")
+      abort "Error: pull in #{@path}: #{entry.inspect} needs a path" unless path.is_a?(String) && !path.empty?
+      if !after.nil? && (!after.is_a?(String) || after.empty?)
+        abort "Error: pull in #{@path}: after for #{path} must be a command string"
+      end
+
+      PullRepo.new(path: File.expand_path(path), after:)
     end
 
     # Each machine rule needs exactly one of detect: (shell) or model: (text).

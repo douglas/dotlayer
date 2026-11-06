@@ -18,7 +18,7 @@ module Dotlayer
       when "install" then Commands::Install.new(
         config:, dry_run: options[:dry_run], verbose: options[:verbose], yes: options[:yes], backup: options[:backup], quiet: options[:quiet]
       ).run
-      when "update" then Commands::Update.new(config:, dry_run: options[:dry_run], verbose: options[:verbose]).run
+      when "update" then exit(1) unless Commands::Update.new(config:, dry_run: options[:dry_run], verbose: options[:verbose]).run
       when "diff" then exit(1) unless Commands::Diff.new(config:, json: options[:json]).run
       when "doctor" then exit(1) unless Commands::Doctor.new(config:, max_depth: options[:depth], json: options[:json]).run
       when "adopt" then run_adopt(config:, argv:, options:)

@@ -131,7 +131,19 @@ system_files:
 hooks:
   after_system_files:
     - sudo udevadm control --reload-rules
+
+pull:
+  - path: ~/src/archlinux/pkgrepo
+    after: bin/build --all
+  - path: ~/src/biblo
+    after: ~/.local/bin/biblo-update
 ```
+
+### Other repos to keep up to date
+
+`pull:` lists git checkouts that `dotlayer update` pulls but never stows. `after:` runs (with `sh -c`, inside the repo) only when the pull brought new commits, after the re-stow, so a build or a service restart happens once per change. A failing pull or `after:` makes `update` exit 1. Only `path` and `after` are allowed.
+
+`update` also pulls dotlayer's own checkout first, when it runs from one. If that or a stowed repo changed, it continues in a fresh `dotlayer update`, so the new code reads the new `dotlayer.yml`.
 
 #### Machine rules
 
@@ -300,7 +312,7 @@ dotlayer [options] <command>
 Commands:
   install     Detect system, stow all layers, install system files
   diff        Show what install would change, without changing anything
-  update      Pull repos, re-stow all layers
+  update      Pull dotlayer, the repos and pull: repos, re-stow, run after: commands
   status      Show detected OS, profile, distros, groups, and packages
   doctor      Check for broken/dangling symlinks, missing repos, missing stow
   adopt       Move config files into a stow package and restow

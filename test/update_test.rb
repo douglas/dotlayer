@@ -28,7 +28,7 @@ class UpdateTest < Minitest::Test
     )
 
     output = capture_io {
-      Dotlayer::Commands::Update.new(config:, detector: stub_detector, dry_run: true).run
+      Dotlayer::Commands::Update.new(config:, detector: stub_detector, dry_run: true, self_root: nil).run
     }.first
 
     assert_match(/dry-run/, output)
@@ -47,7 +47,7 @@ class UpdateTest < Minitest::Test
     )
 
     output = capture_io {
-      Dotlayer::Commands::Update.new(config:, detector: stub_detector, dry_run: true).run
+      Dotlayer::Commands::Update.new(config:, detector: stub_detector, dry_run: true, self_root: nil).run
     }.first
 
     # Should not mention repo name in pull section (skipped)
@@ -62,7 +62,7 @@ class UpdateTest < Minitest::Test
     )
 
     output = capture_io {
-      Dotlayer::Commands::Update.new(config:, detector: stub_detector).run
+      Dotlayer::Commands::Update.new(config:, detector: stub_detector, self_root: nil).run
     }.first
 
     assert_match(/Restowing.*config/, output)
@@ -83,7 +83,7 @@ class UpdateTest < Minitest::Test
 
     assert_raises(SystemExit) do
       capture_io {
-        Dotlayer::Commands::Update.new(config:, detector: stub_detector).run
+        Dotlayer::Commands::Update.new(config:, detector: stub_detector, self_root: nil).run
       }
     end
   end
@@ -103,9 +103,125 @@ class UpdateTest < Minitest::Test
     )
 
     output, _ = capture_io {
-      Dotlayer::Commands::Update.new(config:, detector: stub_detector).run
+      Dotlayer::Commands::Update.new(config:, detector: stub_detector, self_root: nil).run
     }
 
     assert_match(/failed/, output)
+  end
+
+  def test_after_runs_only_for_pull_repos_that_changed
+    behind = clone_behind("pkgrepo")
+    current = clone_behind("biblo", new_commit: false)
+    marker = File.join(@tmpdir, "ran")
+    config = stub_config(
+      target: @target, repos: [], packages: %w[config],
+      pull_repos: [
+        Dotlayer::PullRepo.new(path: behind, after: "pwd >> #{marker}"),
+        Dotlayer::PullRepo.new(path: current, after: "pwd >> #{marker}")
+      ]
+    )
+
+    result = nil
+    output = capture_subprocess_io {
+      result = Dotlayer::Commands::Update.new(config:, detector: stub_detector, self_root: nil, env: {}).run
+    }.first
+
+    assert result
+    assert_equal [File.realpath(behind)], File.readlines(marker, chomp: true)
+    assert_match(/pkgrepo\.\.\. .*updated/, output)
+    assert_match(/biblo: no new commits/, output)
+  end
+
+  def test_failing_after_makes_run_false
+    behind = clone_behind("pkgrepo")
+    config = stub_config(
+      target: @target, repos: [], packages: %w[config],
+      pull_repos: [Dotlayer::PullRepo.new(path: behind, after: "exit 3")]
+    )
+
+    result = nil
+    output = capture_subprocess_io {
+      result = Dotlayer::Commands::Update.new(config:, detector: stub_detector, self_root: nil, env: {}).run
+    }.first
+
+    refute result
+    assert_match(/after-pull failed: exit 3/, output)
+  end
+
+  def test_changed_stowed_repo_reexecs_with_the_changed_pull_repos
+    dotfiles = clone_behind("dotfiles")
+    pkgrepo = clone_behind("pkgrepo")
+    config = stub_config(
+      target: @target, repos: [build_repo(path: dotfiles)], packages: %w[config],
+      pull_repos: [Dotlayer::PullRepo.new(path: pkgrepo, after: "true")]
+    )
+    reexec_with = nil
+    reexec = ->(changed) { reexec_with = changed }
+
+    capture_io {
+      Dotlayer::Commands::Update.new(config:, detector: stub_detector, self_root: nil, env: {}, reexec:).run
+    }
+
+    assert_equal [pkgrepo], reexec_with
+    refute File.exist?(File.join(@target, ".config")), "the re-run restows, not this process"
+  end
+
+  def test_rerun_skips_pulls_and_runs_after_for_the_passed_repos
+    marker = File.join(@tmpdir, "ran")
+    pkgrepo = clone_behind("pkgrepo")
+    config = stub_config(
+      target: @target, repos: [build_repo(path: @repo)], packages: %w[config],
+      pull_repos: [Dotlayer::PullRepo.new(path: pkgrepo, after: "echo ran > #{marker}")]
+    )
+    env = {Dotlayer::Commands::Update::PULLED_ENV => pkgrepo}
+
+    output = capture_subprocess_io {
+      Dotlayer::Commands::Update.new(config:, detector: stub_detector, self_root: nil, env:).run
+    }.first
+
+    refute_match(/Pulling repos/, output)
+    assert File.exist?(marker)
+    refute env.key?(Dotlayer::Commands::Update::PULLED_ENV)
+    assert File.symlink?(File.join(@target, ".config", "test", "config.yml"))
+  end
+
+  def test_dry_run_lists_after_commands_without_running_them
+    pkgrepo = clone_behind("pkgrepo")
+    marker = File.join(@tmpdir, "ran")
+    config = stub_config(
+      target: @target, repos: [], packages: %w[config],
+      pull_repos: [Dotlayer::PullRepo.new(path: pkgrepo, after: "touch #{marker}")]
+    )
+
+    output = capture_io {
+      Dotlayer::Commands::Update.new(config:, detector: stub_detector, dry_run: true, self_root: nil, env: {}).run
+    }.first
+
+    assert_match(/would run if the pull brings new commits/, output)
+    refute File.exist?(marker)
+  end
+
+  private
+
+  # A clone of a new bare remote. With new_commit, the remote then gets a
+  # commit the clone doesn't have yet.
+  def clone_behind(name, new_commit: true)
+    remote = File.join(@tmpdir, "#{name}.git")
+    clone = File.join(@tmpdir, name)
+    seed = File.join(@tmpdir, "#{name}-seed")
+    git = ->(*args) { system("git", *args, out: File::NULL, err: File::NULL) || flunk("git #{args.join(" ")}") }
+
+    git.call("init", "-q", "--bare", "-b", "main", remote)
+    git.call("clone", "-q", remote, seed)
+    commit = ->(msg) {
+      File.write(File.join(seed, msg), msg)
+      git.call("-C", seed, "add", ".")
+      git.call("-C", seed, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", msg)
+      git.call("-C", seed, "push", "-q", "origin", "HEAD:main")
+    }
+    commit.call("one")
+    git.call("clone", "-q", "-b", "main", remote, clone)
+    commit.call("two") if new_commit
+    clone
   end
 end
