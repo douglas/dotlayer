@@ -237,7 +237,7 @@ Adopt:   find repo → move paths into package → Stow (restow)
 
 Commands accept `config:`, `detector:`, `dry_run:`, `verbose:` via constructor injection — making them testable without touching the filesystem.
 
-**Install** also handles system files (Linux only, requires sudo with user confirmation) and post-install hooks (also require user confirmation). Both are skipped in dry-run mode.
+**Install** also handles system files (Linux only, requires sudo with user confirmation) and post-install hooks (also require user confirmation). `SystemFiles.pending` (shared with `diff`) decides which entries differ from disk; only those are installed, and hooks run only when something was installed. `--yes` answers the prompts; without a TTY and without `--yes`, nothing is installed and the user is told to rerun with `--yes`. In dry-run mode nothing runs under sudo.
 
 **Adopt** finds the appropriate repo (private if `-p` flag, else first repo with the package, else first repo), moves each path into the package preserving the directory structure relative to target, then restows.
 

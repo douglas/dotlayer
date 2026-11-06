@@ -272,10 +272,17 @@ Commands:
 Options:
   -c, --config PATH   Config file path
   -n, --dry-run       Run stow in no-op mode to preview changes and conflicts
+  -y, --yes           Answer yes to install prompts (required without a terminal)
   -p, --private       Use private repo (for adopt command)
       --depth N       Max depth for doctor's dangling-link scan (default: 6)
   -v, --verbose       Verbose output
 ```
+
+### install and system files
+
+`install` compares each `system_files` entry with the file on disk, the same way `diff` does (destination missing, content differs, mode differs, or unreadable). Only those entries are listed, confirmed, and installed with `sudo install`. When all of them are up to date, `install` says so, asks nothing, and does not run the `after_system_files` hooks.
+
+Pass `-y`/`--yes` to answer yes to the prompts. Without a terminal on stdin (cron, CI, a pipe) and without `--yes`, `install` prints how many system files need installing and asks you to rerun with `--yes`. That is not a failure exit. With `--dry-run` it lists the pending files and runs no sudo.
 
 ### diff
 

@@ -79,29 +79,12 @@ module Dotlayer
         first_repo = @config.repos.first
         return if entries.empty? || first_repo.nil?
 
-        changed = entries.filter_map { |entry| system_file_change(entry, first_repo) }
+        changed = SystemFiles.pending(entries, first_repo)
         return if changed.empty?
 
         puts "  #{green("system files")}"
-        changed.each { |dest, reason| puts "    #{yellow("CHANGE")}  #{dest} (#{reason})" }
+        changed.each { |change| puts "    #{yellow("CHANGE")}  #{change.dest} (#{change.reason})" }
         @pending += changed.size
-      end
-
-      def system_file_change(entry, repo)
-        source = File.expand_path(entry["source"], repo.path)
-        dest = entry["dest"]
-        mode = (entry["mode"] || "0644").to_s.to_i(8)
-
-        return [dest, "source missing: #{source}"] unless File.file?(source)
-        return [dest, "missing"] unless File.exist?(dest)
-
-        reasons = []
-        reasons << "content differs" unless File.binread(source) == File.binread(dest)
-        actual_mode = File.stat(dest).mode & 0o7777
-        reasons << format("mode %04o, want %04o", actual_mode, mode) unless actual_mode == mode
-        [dest, reasons.join(", ")] unless reasons.empty?
-      rescue Errno::EACCES
-        [dest, "unreadable, cannot compare"]
       end
     end
   end

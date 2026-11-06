@@ -3,11 +3,12 @@ module Dotlayer
     class Install
       include Output
 
-      def initialize(config:, detector: nil, dry_run: false, verbose: false)
+      def initialize(config:, detector: nil, dry_run: false, verbose: false, yes: false)
         @config = config
         @detector = detector || Detector.new(config: @config)
         @dry_run = dry_run
         @verbose = verbose
+        @yes = yes
         @system_failures = 0
       end
 
@@ -52,38 +53,53 @@ module Dotlayer
         puts
         heading "System files"
 
-        unless @dry_run
-          return unless confirm("The following files will be installed with sudo:",
-            @config.system_files.map { |e| e["dest"] })
+        pending = SystemFiles.pending(@config.system_files, first_repo)
+        if pending.empty?
+          ok "  System files are up to date."
+          return
         end
 
-        @config.system_files.each do |entry|
-          source = File.expand_path(entry["source"], first_repo.path)
-          dest = entry["dest"]
-          mode = entry["mode"]
+        return unless @dry_run || approve_system_files(pending)
 
-          print "  #{dest}... "
-
-          if @dry_run
-            warning("dry-run")
-            next
-          end
-
-          # install -D creates missing parent dirs (e.g. /etc/systemd/system-sleep).
-          if system("sudo", "install", "-D", "-m", mode || "0644", source, dest)
-            ok
-          else
-            @system_failures += 1
-            error("failed")
-          end
-        end
+        pending.each { |change| install_system_file(change) }
 
         run_hooks("after_system_files")
+      end
+
+      def approve_system_files(pending)
+        if !@yes && !$stdin.tty?
+          warning "  #{pending.size} system file(s) need installing. " \
+            "Not a terminal, so nothing was asked: rerun with --yes to install them."
+          return false
+        end
+
+        confirm("The following files will be installed with sudo:",
+          pending.map { |change| "#{change.dest} (#{change.reason})" })
+      end
+
+      def install_system_file(change)
+        print "  #{change.dest}... "
+
+        return warning("dry-run") if @dry_run
+
+        # install -D creates missing parent dirs (e.g. /etc/systemd/system-sleep).
+        if File.file?(change.source) &&
+            system("sudo", "install", "-D", "-m", change.mode, change.source, change.dest)
+          ok
+        else
+          @system_failures += 1
+          error("failed")
+        end
       end
 
       def confirm(message, items)
         puts "  #{message}"
         items.each { |item| puts "    #{item}" }
+        if @yes
+          info "  Continue? yes (--yes)"
+          return true
+        end
+
         print "  Continue? [y/N] "
         if $stdin.gets&.strip&.downcase == "y"
           true

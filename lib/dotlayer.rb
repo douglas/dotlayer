@@ -9,6 +9,7 @@ module Dotlayer
   autoload :Repo, "dotlayer/config"
   autoload :Resolver, "dotlayer/resolver"
   autoload :Stow, "dotlayer/stow"
+  autoload :SystemFiles, "dotlayer/system_files"
 
   module Commands
     autoload :Adopt, "dotlayer/commands/adopt"

@@ -25,6 +25,13 @@ module TestConfigHelper
     Dotlayer::Detection.new(os:, profile:, machine:, distros:, groups:)
   end
 
+  # StringIO is never a TTY; install only prompts on one.
+  def tty_stdin(input)
+    io = StringIO.new(input)
+    io.define_singleton_method(:tty?) { true }
+    io
+  end
+
   def stub_detector(detection = build_detection)
     detector = Object.new
     detector.define_singleton_method(:detect) { detection }

@@ -56,7 +56,7 @@ class InstallTest < Minitest::Test
       target: @target,
       repos: [build_repo(path: @repo)],
       packages: %w[config],
-      system_files: [{"source" => "config/etc/test.conf", "dest" => "/tmp/test.conf"}]
+      system_files: [{"source" => "config/etc/test.conf", "dest" => File.join(@tmpdir, "test.conf")}]
     )
 
     assert_raises(SystemExit) do
@@ -90,7 +90,7 @@ class InstallTest < Minitest::Test
       target: @target,
       repos: [build_repo(path: @repo)],
       packages: %w[config],
-      system_files: [{"source" => "config/etc/test.conf", "dest" => "/tmp/test.conf"}],
+      system_files: [{"source" => "config/etc/test.conf", "dest" => File.join(@tmpdir, "test.conf")}],
       hooks: {}
     )
 
@@ -100,7 +100,7 @@ class InstallTest < Minitest::Test
 
     assert_match(/System files/, output)
     assert_match(/dry-run/, output)
-    refute File.exist?("/tmp/test.conf")
+    refute File.exist?(File.join(@tmpdir, "test.conf"))
   end
 
   def test_system_files_stdin_reject_skips
@@ -108,12 +108,12 @@ class InstallTest < Minitest::Test
       target: @target,
       repos: [build_repo(path: @repo)],
       packages: %w[config],
-      system_files: [{"source" => "config/etc/test.conf", "dest" => "/tmp/test.conf"}],
+      system_files: [{"source" => "config/etc/test.conf", "dest" => File.join(@tmpdir, "test.conf")}],
       hooks: {}
     )
 
     original_stdin = $stdin
-    $stdin = StringIO.new("n\n")
+    $stdin = tty_stdin("n\n")
     output = capture_io {
       Dotlayer::Commands::Install.new(config:, detector: stub_detector).run
     }.first
@@ -150,7 +150,7 @@ class InstallTest < Minitest::Test
       target: @target,
       repos: [build_repo(path: @repo)],
       packages: %w[config],
-      system_files: [{"source" => "config/etc/test.conf", "dest" => "/tmp/dotlayer_hook_test"}],
+      system_files: [{"source" => "config/etc/test.conf", "dest" => File.join(@tmpdir, "hook_test")}],
       hooks: {"after_system_files" => ["echo hook_ran"]}
     )
 
@@ -171,13 +171,13 @@ class InstallTest < Minitest::Test
       target: @target,
       repos: [build_repo(path: @repo)],
       packages: %w[config],
-      system_files: [{"source" => "config/etc/test.conf", "dest" => "/tmp/dotlayer_hook_test"}],
+      system_files: [{"source" => "config/etc/test.conf", "dest" => File.join(@tmpdir, "hook_test")}],
       hooks: {"after_system_files" => ["echo hook_ran"]}
     )
 
     # First "y" accepts system files install, second "n" rejects hooks
     original_stdin = $stdin
-    $stdin = StringIO.new("y\nn\n")
+    $stdin = tty_stdin("y\nn\n")
     output = capture_io {
       # stub system() to avoid actual sudo
       install = Dotlayer::Commands::Install.new(config:, detector: stub_detector)
@@ -201,13 +201,13 @@ class InstallTest < Minitest::Test
       target: @target,
       repos: [build_repo(path: @repo)],
       packages: %w[config],
-      system_files: [{"source" => "config/etc/test.conf", "dest" => "/tmp/dotlayer_hook_test"}],
+      system_files: [{"source" => "config/etc/test.conf", "dest" => File.join(@tmpdir, "hook_test")}],
       hooks: {"after_system_files" => ["echo hook_ran"]}
     )
 
     # "y" accepts system files, "y" accepts hooks
     original_stdin = $stdin
-    $stdin = StringIO.new("y\ny\n")
+    $stdin = tty_stdin("y\ny\n")
     commands_run = []
     output = capture_io {
       install = Dotlayer::Commands::Install.new(config:, detector: stub_detector)
@@ -235,11 +235,11 @@ class InstallTest < Minitest::Test
       target: @target,
       repos: [build_repo(path: @repo)],
       packages: %w[config],
-      system_files: [{"source" => "config/etc/test.conf", "dest" => "/tmp/new-dir/test.conf"}]
+      system_files: [{"source" => "config/etc/test.conf", "dest" => File.join(@tmpdir, "new-dir", "test.conf")}]
     )
 
     original_stdin = $stdin
-    $stdin = StringIO.new("y\n")
+    $stdin = tty_stdin("y\n")
     commands_run = []
     capture_io {
       install = Dotlayer::Commands::Install.new(config:, detector: stub_detector)
@@ -250,7 +250,7 @@ class InstallTest < Minitest::Test
       install.run
     }
 
-    assert_includes commands_run, ["sudo", "install", "-D", "-m", "0644", system_file, "/tmp/new-dir/test.conf"]
+    assert_includes commands_run, ["sudo", "install", "-D", "-m", "0644", system_file, File.join(@tmpdir, "new-dir", "test.conf")]
   ensure
     $stdin = original_stdin
   end
@@ -264,11 +264,11 @@ class InstallTest < Minitest::Test
       target: @target,
       repos: [build_repo(path: @repo)],
       packages: %w[config],
-      system_files: [{"source" => "config/etc/test.conf", "dest" => "/tmp/test.conf"}]
+      system_files: [{"source" => "config/etc/test.conf", "dest" => File.join(@tmpdir, "test.conf")}]
     )
 
     original_stdin = $stdin
-    $stdin = StringIO.new("y\n")
+    $stdin = tty_stdin("y\n")
     assert_raises(SystemExit) do
       capture_io {
         install = Dotlayer::Commands::Install.new(config:, detector: stub_detector)
@@ -276,6 +276,106 @@ class InstallTest < Minitest::Test
         install.run
       }
     end
+  ensure
+    $stdin = original_stdin
+  end
+
+  def test_system_files_up_to_date_skips_prompt_install_and_hooks
+    config = system_files_config(same: "a")
+    commands_run = []
+
+    output = run_install(config, commands_run:, stdin: tty_stdin(""))
+
+    assert_match(/System files are up to date/, output)
+    refute_match(/Continue\?/, output)
+    refute_match(/hooks/, output)
+    assert_empty commands_run
+  end
+
+  def test_only_pending_system_files_are_listed_and_installed
+    config = system_files_config(same: "a", changed: "new")
+    File.write(File.join(@tmpdir, "changed.conf"), "old")
+    commands_run = []
+
+    output = run_install(config, commands_run:, stdin: tty_stdin("y\ny\n"))
+
+    assert_match(/changed\.conf \(content differs\)/, output)
+    refute_match(/same\.conf/, output)
+    installs = commands_run.select { |args| args.first == "sudo" }
+    assert_equal 1, installs.size
+    assert_equal File.join(@tmpdir, "changed.conf"), installs.first.last
+    assert_includes commands_run, ["echo hook_ran"]
+  end
+
+  def test_system_files_without_terminal_or_yes_asks_for_yes_and_does_not_fail
+    config = system_files_config(changed: "new")
+    commands_run = []
+
+    output = run_install(config, commands_run:, stdin: StringIO.new(""))
+
+    assert_match(/1 system file\(s\) need installing.*--yes/, output)
+    refute_match(/Skipped/, output)
+    refute_match(/hooks/, output)
+    assert_empty commands_run
+  end
+
+  def test_yes_installs_pending_system_files_and_runs_hooks_without_input
+    config = system_files_config(changed: "new")
+    commands_run = []
+
+    output = run_install(config, commands_run:, stdin: StringIO.new(""), yes: true)
+
+    refute_match(/Skipped/, output)
+    assert_equal 1, commands_run.count { |args| args.first == "sudo" }
+    assert_includes commands_run, ["echo hook_ran"]
+  end
+
+  def test_dry_run_reports_up_to_date_system_files
+    config = system_files_config(same: "a")
+
+    output = capture_io {
+      Dotlayer::Commands::Install.new(config:, detector: stub_detector, dry_run: true).run
+    }.first
+
+    assert_match(/System files are up to date/, output)
+    refute_match(/hooks/, output)
+  end
+
+  private
+
+  # Writes each name's source in the repo; "same" bodies are also written to
+  # dest, so they are up to date. Other names have no dest yet, unless the test
+  # writes one.
+  def system_files_config(**bodies)
+    etc = File.join(@repo, "config", "etc")
+    FileUtils.mkdir_p(etc)
+    entries = bodies.map do |name, body|
+      File.write(File.join(etc, "#{name}.conf"), body)
+      dest = File.join(@tmpdir, "#{name}.conf")
+      File.write(dest, body) if name == :same
+      {"source" => "config/etc/#{name}.conf", "dest" => dest}
+    end
+
+    stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo)],
+      packages: %w[config],
+      system_files: entries,
+      hooks: {"after_system_files" => ["echo hook_ran"]}
+    )
+  end
+
+  def run_install(config, commands_run:, stdin:, **options)
+    original_stdin = $stdin
+    $stdin = stdin
+    capture_io {
+      install = Dotlayer::Commands::Install.new(config:, detector: stub_detector, **options)
+      install.define_singleton_method(:system) { |*args|
+        commands_run << args
+        true
+      }
+      install.run
+    }.first
   ensure
     $stdin = original_stdin
   end

@@ -14,7 +14,9 @@ module Dotlayer
 
       case command
       when "status" then Commands::Status.new(config:).run
-      when "install" then Commands::Install.new(config:, dry_run: options[:dry_run], verbose: options[:verbose]).run
+      when "install" then Commands::Install.new(
+        config:, dry_run: options[:dry_run], verbose: options[:verbose], yes: options[:yes]
+      ).run
       when "update" then Commands::Update.new(config:, dry_run: options[:dry_run], verbose: options[:verbose]).run
       when "diff" then exit(1) unless Commands::Diff.new(config:).run
       when "doctor" then exit(1) unless Commands::Doctor.new(config:, max_depth: options[:depth]).run
@@ -29,12 +31,13 @@ module Dotlayer
     private
 
     def parse_global_options(argv)
-      options = {dry_run: false, verbose: false, config: nil, private: false, depth: nil}
+      options = {dry_run: false, verbose: false, config: nil, private: false, depth: nil, yes: false}
 
       OptionParser.new do |opts|
         opts.on("-c", "--config PATH", "Config file path") { |v| options[:config] = v }
         opts.on("-n", "--dry-run", "Show what would be done") { options[:dry_run] = true }
         opts.on("-v", "--verbose", "Verbose output") { options[:verbose] = true }
+        opts.on("-y", "--yes", "Answer yes to install prompts (needed without a terminal)") { options[:yes] = true }
         opts.on("-p", "--private", "Use private repo") { options[:private] = true }
         opts.on("--depth N", Integer, "Max depth for doctor's dangling-link scan") { |v| options[:depth] = v }
       end.parse!(argv)
@@ -73,6 +76,7 @@ module Dotlayer
         Options:
           -c, --config PATH   Config file path (default: dotlayer.yml in repo)
           -n, --dry-run       Show what would be done without making changes
+          -y, --yes           Answer yes to install prompts (required when stdin is not a terminal)
           -p, --private       Use private repo (for adopt command)
               --depth N       Max depth for doctor's dangling-link scan (default: 6)
           -v, --verbose       Verbose output

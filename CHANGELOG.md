@@ -2,6 +2,22 @@
 
 All notable changes to dotlayer. Versions follow [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+
+- `install -y`/`--yes` answers yes to the system-file and hook prompts.
+
+### Changed
+
+- `install` only lists, confirms, and installs system files that are pending,
+  using the same check as `diff` (missing, content, mode, unreadable). When all
+  are up to date it says so, skips the prompt, and does not run the
+  `after_system_files` hooks.
+- Without a terminal and without `--yes`, `install` reports how many system
+  files need installing and asks you to rerun with `--yes`, instead of reading
+  EOF and printing "Skipped." This is not a failure exit.
+
 ## 0.3.2 — 2026-11-05
 
 ### Added
