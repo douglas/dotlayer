@@ -102,4 +102,75 @@ class CLITest < Minitest::Test
       assert_match(/Using config: #{Regexp.escape(path)} \(-c\)/, error)
     end
   end
+
+  def test_install_yes_installs_system_files_and_without_it_asks_for_yes
+    skip "system files are Linux only" unless RbConfig::CONFIG["host_os"].match?(/linux/)
+
+    with_install_fixture do |dir, config_path|
+      dest = File.join(dir, "etc", "test.conf")
+      $stdin = StringIO.new("")
+
+      output = capture_io { Dotlayer::CLI.new.run(["-c", config_path, "install"]) }.first
+
+      assert_match(/1 system file\(s\) need installing.*--yes/, output)
+      refute File.exist?(dest)
+
+      capture_io { Dotlayer::CLI.new.run(["-c", config_path, "install", "--yes"]) }
+
+      assert_equal "sys", File.read(dest)
+    end
+  ensure
+    $stdin = STDIN
+  end
+
+  def test_install_backup_moves_blocking_files_aside
+    with_install_fixture do |dir, config_path|
+      live = File.join(dir, "home", ".config", "app", "settings")
+      FileUtils.mkdir_p(File.dirname(live))
+      File.write(live, "mine")
+
+      error = capture_io {
+        assert_raises(SystemExit) { Dotlayer::CLI.new.run(["-c", config_path, "install"]) }
+      }.first
+      assert_match(/Rerun with --backup/, error)
+
+      capture_io { Dotlayer::CLI.new.run(["-c", config_path, "install", "--backup", "--yes"]) }
+
+      assert File.symlink?(live)
+      moved = Dir.glob(File.join(dir, "home", "dotfiles-conflicts-*", ".config", "app", "settings"))
+      assert_equal ["mine"], moved.map { |file| File.read(file) }
+    end
+  end
+
+  private
+
+  # A repo with a config package and one system file, a fake sudo that just
+  # runs its arguments, and a temp HOME so stow reads no real ignore list.
+  def with_install_fixture
+    Dir.mktmpdir do |dir|
+      repo = File.join(dir, "repo")
+      FileUtils.mkdir_p([File.join(repo, "config", ".config", "app"), File.join(repo, "sys"), File.join(dir, "home"), File.join(dir, "bin")])
+      File.write(File.join(repo, "config", ".config", "app", "settings"), "repo")
+      File.write(File.join(repo, "sys", "test.conf"), "sys")
+      File.write(File.join(dir, "bin", "sudo"), "#!/bin/sh\nexec \"$@\"\n")
+      File.chmod(0o755, File.join(dir, "bin", "sudo"))
+      config_path = File.join(dir, "dotlayer.yml")
+      File.write(config_path, <<~YAML)
+        target: #{dir}/home
+        repos:
+          - path: #{repo}
+        packages: [config]
+        system_files:
+          - source: sys/test.conf
+            dest: #{dir}/etc/test.conf
+      YAML
+
+      original = ENV.values_at("PATH", "HOME")
+      ENV["PATH"] = "#{dir}/bin:#{original[0]}"
+      ENV["HOME"] = dir
+      yield dir, config_path
+    ensure
+      ENV["PATH"], ENV["HOME"] = original
+    end
+  end
 end

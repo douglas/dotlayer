@@ -184,23 +184,28 @@ module Dotlayer
         SKIP_DIRS.include?(File.basename(path)) ||
           SKIP_PATHS.include?(relative) ||
           repo_roots.include?(path) ||
-          foreign_checkout?(path, relative)
+          foreign_checkout?(path)
       end
 
       # Another git checkout (~/src/*, ~/work/*) holds stow links only where a
       # package ships files into it, so skip it otherwise. Checkouts are most
       # of the files under a home dir, and the scan is far faster without them.
-      def foreign_checkout?(path, relative)
-        File.exist?(File.join(path, ".git")) && !@shipped_dirs.include?(relative)
+      def foreign_checkout?(path)
+        File.exist?(File.join(path, ".git")) && !@shipped_dirs.include?(path)
       end
 
-      # Every directory any package in the repos ships, relative to the target.
-      # Covers packages that don't apply to this machine, since their old
-      # links can still dangle here.
+      # Every directory any package in the repos ships, as an absolute path
+      # under that package's own target. Covers packages that don't apply to
+      # this machine, since their old links can still dangle here.
       def shipped_dirs(repo_roots)
         repo_roots.flat_map { |repo|
           Dir.glob("*/", base: repo).flat_map do |package|
-            Dir.glob("**/", File::FNM_DOTMATCH, base: File.join(repo, package)).map { |dir| dir.chomp("/") }
+            package = package.chomp("/")
+            target = @config.target_for(repo, package)
+            Dir.glob("**/", File::FNM_DOTMATCH, base: File.join(repo, package))
+              .map { |dir| dir.chomp("/") }
+              .reject { |dir| dir == "." }
+              .map { |dir| File.join(target, dir) }
           end
         }.to_set
       end

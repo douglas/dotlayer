@@ -53,6 +53,9 @@ All notable changes to dotlayer. Versions follow [Semantic Versioning](https://s
 
 ### Fixed
 
+- `doctor`'s dangling-link scan decides which git checkouts to enter from each
+  package's own target, so a package with a per-package `target:` that ships
+  into a checkout under it is scanned there.
 - `diff` and `doctor` could report no conflict for a file that `install` then
   refused to overwrite, such as `.config/nvim/.gitignore`. Stow reads its
   global ignore list from `$HOME/.stow-global-ignore`, and until `install`

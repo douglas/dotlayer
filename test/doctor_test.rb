@@ -152,6 +152,24 @@ class DoctorTest < Minitest::Test
     end
   end
 
+  def test_dangling_scan_enters_checkouts_a_package_ships_into_under_its_own_target
+    Dir.mktmpdir do |tmpdir|
+      target = File.join(tmpdir, "home")
+      codex = File.join(tmpdir, "codex-home")
+      repo = File.join(tmpdir, "repo")
+      FileUtils.mkdir_p([File.join(repo, "codex", "shipped"), File.join(codex, "shipped", ".git"), File.join(codex, "other", ".git"), target])
+      gone = File.join(repo, "codex", "gone")
+      File.symlink(gone, File.join(codex, "shipped", "dangling"))
+      File.symlink(gone, File.join(codex, "other", "dangling"))
+      config = stub_config(target:, repos: [build_repo(path: repo, packages: %w[codex], targets: {"codex" => codex})])
+
+      output = run_doctor(config)
+
+      assert_match(%r{Dangling link into repo: .*shipped/dangling}, output)
+      refute_match(%r{other/dangling}, output)
+    end
+  end
+
   def test_dangling_scan_skips_other_git_checkouts
     with_scan_fixture do |target, repo, config|
       checkout = File.join(target, "src", "project")
