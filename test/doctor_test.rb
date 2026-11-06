@@ -116,6 +116,26 @@ class DoctorTest < Minitest::Test
     end
   end
 
+  def test_package_target_is_checked_for_plain_files_broken_links_and_dangling_links
+    Dir.mktmpdir do |tmpdir|
+      target = File.join(tmpdir, "home")
+      codex = File.join(tmpdir, "codex-home")
+      repo = File.join(tmpdir, "repo")
+      FileUtils.mkdir_p([File.join(repo, "codex", ".config"), target, codex])
+      File.write(File.join(repo, "codex", "config.toml"), "repo\n")
+      File.write(File.join(codex, "config.toml"), "rewritten\n")
+      File.symlink(File.join(repo, "codex", "gone"), File.join(codex, "dangling"))
+      config = stub_config(
+        target:, repos: [build_repo(path: repo, packages: %w[codex], targets: {"codex" => codex})]
+      )
+
+      output = run_doctor(config)
+
+      assert_match(%r{repo/codex: .*config\.toml}, output)
+      assert_match(/Dangling link into repo: #{Regexp.escape(File.join(codex, "dangling"))}/, output)
+    end
+  end
+
   def test_linked_install_passes_link_check
     Dir.mktmpdir do |tmpdir|
       target = File.join(tmpdir, "home")

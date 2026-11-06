@@ -29,12 +29,18 @@ module Dotlayer
         puts
       end
 
+      def tilde(path)
+        path.start_with?("#{Dir.home}/") ? path.sub(Dir.home, "~") : path
+      end
+
       def print_packages(packages)
         heading "Packages to stow"
 
         packages.each do |repo_path, package|
           repo_name = File.basename(repo_path)
-          puts "  #{repo_name}/#{green(package)}"
+          target = @config.target_for(repo_path, package)
+          suffix = (target == @config.target) ? "" : " -> #{tilde(target)}"
+          puts "  #{repo_name}/#{green(package)}#{suffix}"
         end
 
         puts

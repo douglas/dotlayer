@@ -1,3 +1,4 @@
+require "fileutils"
 require "open3"
 
 module Dotlayer
@@ -29,12 +30,16 @@ module Dotlayer
 
     def dry_run? = @dry_run
 
-    def restow(repo_path, package)
+    # target overrides the one given to new (per-package targets).
+    def restow(repo_path, package, target: nil)
+      target = target ? File.expand_path(target) : @target
+      return true unless target_ready?(target)
+
       args = ["stow", "-R", "--no-folding"]
       args << "-n" if @dry_run
       args << "-v" if @verbose
       args << "-d" << repo_path
-      args << "-t" << @target
+      args << "-t" << target
       args << package
 
       if !@quiet && (@verbose || @dry_run)
@@ -48,6 +53,24 @@ module Dotlayer
     rescue Errno::ENOENT
       @last_error = "GNU Stow is not installed. Install it with your package manager."
       false
+    end
+
+    private
+
+    # Stow needs the target dir to exist. A per-package target such as
+    # ~/.codex may not yet: create it, or in simulate mode report nothing to
+    # do (the diff command reports the missing dir itself).
+    def target_ready?(target)
+      return true if Dir.exist?(target)
+
+      if @dry_run
+        @last_output = ""
+        @last_error = nil
+        return false
+      end
+
+      FileUtils.mkdir_p(target)
+      true
     end
   end
 end

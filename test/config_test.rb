@@ -194,4 +194,110 @@ class ConfigTest < Minitest::Test
       assert_equal File.expand_path("~/.dotfiles"), config.repos[0].path
     end
   end
+
+  def test_packages_accept_names_and_hashes_with_targets
+    config = load_config(<<~YAML)
+      target: /home/me
+      packages:
+        - config
+        - name: codex
+          target: /home/me/.codex
+        - name: plain
+    YAML
+
+    assert_equal %w[config codex plain], config.packages
+    assert_equal({"codex" => "/home/me/.codex"}, config.package_targets)
+  end
+
+  def test_repo_package_lists_accept_hashes
+    config = load_config(<<~YAML)
+      repos:
+        - path: /repo
+          packages:
+            - config
+            - {name: codex, target: /t/codex}
+          standalone_packages:
+            - {name: bin, target: /t/bin}
+          group_packages:
+            work:
+              - {name: work, target: /t/work}
+              - other
+    YAML
+
+    repo = config.repos.first
+    assert_equal %w[config codex], repo.packages
+    assert_equal %w[bin], repo.standalone_packages
+    assert_equal({"work" => %w[work other]}, repo.group_packages)
+    assert_equal({"codex" => "/t/codex", "bin" => "/t/bin", "work" => "/t/work"}, repo.targets)
+  end
+
+  def test_target_for_uses_package_target_global_target_and_base_target_for_variants
+    config = load_config(<<~YAML)
+      target: /home/me
+      repos:
+        - path: /repo
+          packages:
+            - config
+            - {name: codex, target: /home/me/.codex}
+            - codex-agents
+          standalone_packages:
+            - {name: bin, target: /home/me/.bin}
+    YAML
+
+    assert_equal "/home/me", config.target_for("/repo", "config")
+    assert_equal "/home/me/.codex", config.target_for("/repo", "codex")
+    # Variants found by convention inherit the base package's target.
+    assert_equal "/home/me/.codex", config.target_for("/repo", "codex-linux")
+    # A package that is listed itself does not inherit from a prefix.
+    assert_equal "/home/me", config.target_for("/repo", "codex-agents")
+    assert_equal "/home/me/.bin", config.target_for("/repo", "bin")
+    assert_equal "/home/me", config.target_for("/elsewhere", "codex")
+  end
+
+  def test_target_for_uses_top_level_package_targets_for_repos_without_packages
+    config = load_config(<<~YAML)
+      target: /home/me
+      repos:
+        - path: /repo
+      packages:
+        - {name: config, target: /t/config}
+    YAML
+
+    assert_equal "/t/config", config.target_for("/repo", "config")
+    assert_equal "/t/config", config.target_for("/repo", "config-linux")
+    assert_equal "/home/me", config.target_for("/repo", "other")
+  end
+
+  def test_string_packages_keep_the_global_target
+    config = load_config("target: /home/me\npackages: [config]\n")
+
+    assert_equal "/home/me", config.target_for(config.repos.first.path, "config")
+    assert_empty config.package_targets
+  end
+
+  def test_invalid_package_entries_abort_with_a_clear_message
+    {
+      "packages:\n  - {target: /t}\n" => /needs a name/,
+      "packages:\n  - {name: a, path: /t}\n" => /unknown package key\(s\) path/,
+      "packages:\n  - {name: a, target: ''}\n" => /target for a must be a non-empty path/,
+      "packages:\n  - 42\n" => /name or a \{name:, target:\}/,
+      "repos:\n  - path: /r\n    standalone_packages:\n      - {name: a, tgt: /t}\n" => /standalone_packages.*unknown package key/
+    }.each do |yaml, message|
+      error = nil
+      stderr = capture_io { error = assert_raises(SystemExit) { load_config(yaml) } }.last
+
+      assert_equal 1, error.status
+      assert_match(message, stderr)
+    end
+  end
+
+  private
+
+  def load_config(yaml)
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "dotlayer.yml")
+      File.write(path, yaml)
+      Dotlayer::Config.new(path)
+    end
+  end
 end

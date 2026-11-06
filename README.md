@@ -189,6 +189,21 @@ The `private: true` flag tells dotlayer which repo to use when you run `dotlayer
 `group_packages` lets a group detection rule opt in exact package names like `work`
 that do not follow the `config-mycompany` suffix convention.
 
+### Per-package target
+
+A package entry (in `packages:`, or in a repo's `packages:`, `standalone_packages:` or `group_packages:`) is either a name or a mapping with a `target:`. The target replaces the global `target:` for that package:
+
+```yaml
+packages:
+  - config
+  - name: codex
+    target: ~/.codex
+```
+
+`install`, `update`, `diff`, `doctor` (link checks and the dangling-link scan) and `install --backup` all use it, and `status` shows `-> <target>` when it differs. A missing target directory is created by `install`; `diff` reports it as pending. Only `name` and `target` are allowed; an unknown key or a missing name is a config error.
+
+A layered variant that is not listed itself (for example `codex-linux`, found by the `<base>-<suffix>` convention) uses the target of its base package, `codex`. A package that is listed, such as `codex-agents` next to `codex`, uses its own target or the global one.
+
 ### What goes where?
 
 **Public repo** — uses the standard base packages (`stow`, `bin`, `git`, `zsh`, `config`) with full layering support:

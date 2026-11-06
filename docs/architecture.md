@@ -94,11 +94,11 @@ Immutable value object produced by `Detector`. Carries the machine identity thro
 ### Repo (value object)
 
 ```ruby
-Repo = Data.define(:path, :private, :packages, :standalone_packages, :group_packages)
+Repo = Data.define(:path, :private, :packages, :standalone_packages, :group_packages, :targets)
 ```
 
 Immutable value object representing a dotfiles repository. `private` marks it for sensitive configs.
-`packages` optionally overrides the global package list for this repo. `standalone_packages`
+`targets` maps explicitly listed package names to a per-package target. `packages` optionally overrides the global package list for this repo. `standalone_packages`
 optionally allowlists exact non-layered package names. `group_packages` maps detected group names
 to exact packages that should only be stowed for that group.
 
@@ -159,6 +159,8 @@ The core algorithm. Takes a `Config` and `Detection`, scans repo directories, an
 - **All-packages repos** — repos where no base package directories exist. Stows all top-level directories alphabetically.
 
 Per-repo `packages` override the global package list for that repo.
+
+**Per-package target:** package entries may be `{name:, target:}`. `Config` keeps the name lists as plain strings, so the resolver is unchanged, and keeps the targets beside them (`Repo#targets`, `Config#package_targets`). Commands ask `Config#target_for(repo_path, package)`: a listed package uses its own target or the global one; an unlisted layered variant (found by the `<base>-<suffix>` convention) inherits the longest matching base package's target.
 
 **Layer resolution order:**
 

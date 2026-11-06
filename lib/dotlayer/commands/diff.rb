@@ -39,7 +39,10 @@ module Dotlayer
       private
 
       def diff_package(stow, repo_path, package)
-        success = stow.restow(repo_path, package)
+        target = @config.target_for(repo_path, package)
+        return diff_missing_target(repo_path, package, target) unless Dir.exist?(target)
+
+        success = stow.restow(repo_path, package, target:)
         plan = parse_plan(stow.last_output.to_s)
         problems = success ? [] : plan[:conflicts]
         problems = [stow.last_error] if !success && problems.empty?
@@ -50,6 +53,13 @@ module Dotlayer
         plan[:unlinks].each { |path| puts "    #{yellow("UNLINK")}  #{path}" }
         problems.each { |problem| puts "    #{red("CONFLICT")} #{problem}" }
         @pending += plan[:links].size + plan[:unlinks].size + problems.size
+      end
+
+      # install creates a missing target dir, then links everything.
+      def diff_missing_target(repo_path, package, target)
+        puts "  #{green(package)} (#{File.basename(repo_path)})"
+        puts "    #{green("LINK")}    #{package} files into new target #{target}"
+        @pending += 1
       end
 
       # Restow shows UNLINK then LINK for links that already exist; stow marks

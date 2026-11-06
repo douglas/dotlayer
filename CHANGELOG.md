@@ -6,6 +6,14 @@ All notable changes to dotlayer. Versions follow [Semantic Versioning](https://s
 
 ### Added
 
+- Per-package target: a package entry in `packages:` (top-level or per repo),
+  `standalone_packages:` or `group_packages:` may be `{name: codex, target:
+  ~/.codex}` instead of a name. The target replaces the global `target:` for
+  stow, `diff`, `doctor` (link checks and the dangling-link scan), `status`
+  (shown when it differs), and `--backup`. A layered variant that is not listed
+  itself, such as `codex-linux`, uses its base package's target. String entries
+  work as before; an unknown key or a missing name is a config error.
+- `install` creates a missing package target directory; `diff` reports it.
 - `install --backup` clears what stow would refuse to overwrite before it
   stows each package. A real file identical to the repo copy is deleted; a
   different file, or a link pointing outside the configured repos, is moved to

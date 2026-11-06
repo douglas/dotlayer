@@ -79,7 +79,7 @@ module Dotlayer
 
       def check_broken_symlinks
         print "  Checking for broken symlinks in managed config paths... "
-        broken = find_broken_symlinks(@config.target)
+        broken = find_broken_symlinks
         if broken.empty?
           ok "none"
         else
@@ -106,7 +106,8 @@ module Dotlayer
         print "  Checking that managed files are still links... "
         stow = Stow.new(target: @config.target, dry_run: true, quiet: true)
         conflicts = @packages.flat_map { |repo_path, package|
-          next [] if !Dir.exist?(File.join(repo_path, package)) || stow.restow(repo_path, package)
+          next [] if !Dir.exist?(File.join(repo_path, package)) ||
+            stow.restow(repo_path, package, target: @config.target_for(repo_path, package))
 
           conflicts = stow.last_output.to_s.each_line(chomp: true).filter_map { |line| Diff::CONFLICT_LINE.match(line)&.[](1) }
           conflicts = [stow.last_error] if conflicts.empty?
@@ -131,7 +132,7 @@ module Dotlayer
       # symlinks and never deletes anything.
       def check_dangling_repo_links
         print "  Checking for dangling links into repos (depth #{@max_depth})... "
-        dangling = find_dangling_repo_links(@config.target)
+        dangling = find_dangling_repo_links(scan_roots)
         if dangling.empty?
           ok "none"
           return
@@ -144,11 +145,18 @@ module Dotlayer
         @hints << "To remove dangling links: rm #{dangling.keys.map { |link| Shellwords.escape(link) }.join(" ")}"
       end
 
-      def find_dangling_repo_links(target)
+      # The global target plus every per-package target, minus targets that
+      # sit inside another root (the scan already reaches them).
+      def scan_roots
+        roots = ([@config.target] + @packages.map { |repo_path, package| @config.target_for(repo_path, package) }).uniq
+        roots.reject { |root| roots.any? { |other| other != root && root.start_with?("#{other}/") } }
+      end
+
+      def find_dangling_repo_links(roots)
         repo_roots = @config.repos.map(&:path)
         @shipped_dirs = shipped_dirs(repo_roots)
         found = {}
-        scan_dir(target, target, 0, repo_roots, found)
+        roots.each { |root| scan_dir(root, root, 0, repo_roots, found) }
         found.except(*@reported_links)
       end
 
@@ -197,12 +205,14 @@ module Dotlayer
         }.to_set
       end
 
-      def find_broken_symlinks(target)
+      def find_broken_symlinks
         broken = []
         managed_roots = [".config", ".local"]
         scan_paths = @packages.flat_map { |repo_path, package|
           pkg_dir = File.join(repo_path, package)
           next [] unless Dir.exist?(pkg_dir)
+
+          target = @config.target_for(repo_path, package)
 
           managed_roots.flat_map do |root_name|
             root_path = File.join(pkg_dir, root_name)

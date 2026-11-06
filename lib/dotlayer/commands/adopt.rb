@@ -12,7 +12,6 @@ module Dotlayer
         @private_repo = private_repo
         @dry_run = dry_run
         @verbose = verbose
-        @target = File.expand_path(@config.target)
       end
 
       def run
@@ -21,6 +20,7 @@ module Dotlayer
           abort "Error: package '#{@package}' not found in any repo"
         end
 
+        @target = File.expand_path(@config.target_for(repo_path, @package))
         stow = Stow.new(target: @target, dry_run: @dry_run, verbose: @verbose)
 
         @paths.each do |path|

@@ -36,9 +36,10 @@ module Dotlayer
       "\e[1m#{text}\e[0m"
     end
 
-    def restow_package(stow, repo_path, package, verb: "Stowing")
+    def restow_package(stow, repo_path, package, verb: "Stowing", target: nil)
       print "  #{verb} #{green(package)}... "
-      if stow.restow(repo_path, package)
+      options = target ? {target:} : {}
+      if stow.restow(repo_path, package, **options)
         stow.dry_run? ? warning("dry-run") : ok
         true
       else

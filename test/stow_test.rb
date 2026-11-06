@@ -128,4 +128,29 @@ class StowTest < Minitest::Test
   ensure
     ENV["HOME"] = original_home
   end
+
+  def test_restow_target_overrides_the_default
+    other = File.join(@tmpdir, "other")
+    FileUtils.mkdir_p(other)
+    stow = Dotlayer::Stow.new(target: @target)
+
+    assert stow.restow(@repo, "pkg", target: other)
+    assert File.symlink?(File.join(other, ".config", "test", "config.yml"))
+    refute File.exist?(File.join(@target, ".config"))
+  end
+
+  def test_restow_creates_a_missing_target
+    target = File.join(@tmpdir, "new", "target")
+
+    assert Dotlayer::Stow.new(target: @target).restow(@repo, "pkg", target:)
+    assert File.symlink?(File.join(target, ".config", "test", "config.yml"))
+  end
+
+  def test_dry_run_does_not_create_a_missing_target
+    target = File.join(@tmpdir, "new", "target")
+    stow = Dotlayer::Stow.new(target: @target, dry_run: true, quiet: true)
+
+    assert stow.restow(@repo, "pkg", target:)
+    refute File.exist?(target)
+  end
 end

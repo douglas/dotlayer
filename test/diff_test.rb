@@ -107,6 +107,38 @@ class DiffTest < Minitest::Test
     ENV["HOME"] = original_home
   end
 
+  def test_package_target_is_used_for_the_simulation
+    codex_target = File.join(@tmpdir, "codex-home")
+    FileUtils.mkdir_p([File.join(@repo, "codex"), codex_target])
+    File.write(File.join(@repo, "codex", "config.toml"), "repo")
+    File.write(File.join(codex_target, "config.toml"), "mine")
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo, packages: %w[codex], targets: {"codex" => codex_target})]
+    )
+
+    output = capture_io { Dotlayer::Commands::Diff.new(config:, detector: stub_detector).run }.first
+
+    assert_match(/CONFLICT\S*\s+.*config\.toml/, output)
+  end
+
+  def test_missing_package_target_is_reported_as_pending_and_not_created
+    codex_target = File.join(@tmpdir, "codex-home")
+    FileUtils.mkdir_p(File.join(@repo, "codex"))
+    File.write(File.join(@repo, "codex", "config.toml"), "repo")
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo, packages: %w[codex], targets: {"codex" => codex_target})]
+    )
+    result = nil
+
+    output = capture_io { result = Dotlayer::Commands::Diff.new(config:, detector: stub_detector).run }.first
+
+    refute result
+    assert_match(/new target #{Regexp.escape(codex_target)}/, output)
+    refute File.exist?(codex_target)
+  end
+
   def test_cli_exits_1_when_changes_pending
     config_path = File.join(@tmpdir, "dotlayer.yml")
     File.write(config_path, "target: #{@target}\nrepos:\n  - path: #{@repo}\npackages:\n  - config\n")

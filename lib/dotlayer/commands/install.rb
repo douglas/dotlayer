@@ -40,14 +40,15 @@ module Dotlayer
       private
 
       def install_package(stow, conflicts, repo_path, package)
-        resolved = conflicts&.resolve(repo_path, package)
+        target = @config.target_for(repo_path, package)
+        resolved = conflicts&.resolve(repo_path, package, target:)
         if @dry_run && resolved&.positive?
           print "  Stowing #{green(package)}... "
           warning("dry-run, after the conflicts above are cleared")
           return true
         end
 
-        success = restow_package(stow, repo_path, package)
+        success = restow_package(stow, repo_path, package, target:)
         @conflict_failed ||= !success && stow.last_error.to_s.each_line.any? { |l| Diff::CONFLICT_LINE.match?(l.chomp) }
         success
       end

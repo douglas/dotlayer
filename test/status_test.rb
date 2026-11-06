@@ -82,4 +82,20 @@ class StatusTest < Minitest::Test
   ensure
     FileUtils.rm_rf(tmpdir)
   end
+
+  def test_shows_target_only_when_it_differs
+    Dir.mktmpdir do |tmpdir|
+      FileUtils.mkdir_p([File.join(tmpdir, "config"), File.join(tmpdir, "codex")])
+      config = stub_config(
+        target: "/home/me",
+        repos: [build_repo(path: tmpdir, packages: %w[config codex], targets: {"codex" => "/home/me/.codex"})]
+      )
+
+      output = capture_io { Dotlayer::Commands::Status.new(config:, detector: stub_detector).run }.first
+
+      assert_match(/config\S*\n/, output)
+      refute_match(/config\S* ->/, output)
+      assert_match(%r{codex\S* -> /home/me/\.codex}, output)
+    end
+  end
 end

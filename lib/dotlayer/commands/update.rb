@@ -53,7 +53,7 @@ module Dotlayer
         heading "Re-stowing packages"
 
         failures = packages.count do |repo_path, package|
-          !restow_package(stow, repo_path, package, verb: "Restowing")
+          !restow_package(stow, repo_path, package, verb: "Restowing", target: @config.target_for(repo_path, package))
         end
 
         abort_failed_packages(failures) if failures.positive?

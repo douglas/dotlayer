@@ -17,8 +17,8 @@ module TestConfigHelper
     config
   end
 
-  def build_repo(path:, private: false, packages: nil, standalone_packages: nil, group_packages: {})
-    Dotlayer::Repo.new(path:, private:, packages:, standalone_packages:, group_packages:)
+  def build_repo(path:, private: false, packages: nil, standalone_packages: nil, group_packages: {}, targets: {})
+    Dotlayer::Repo.new(path:, private:, packages:, standalone_packages:, group_packages:, targets:)
   end
 
   def build_detection(os: "linux", profile: "desktop", machine: "test-machine", distros: [], groups: [])

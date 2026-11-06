@@ -107,6 +107,40 @@ class InstallTest < Minitest::Test
     assert_empty Dir.glob(File.join(@target, "dotfiles-conflicts-*"))
   end
 
+  def test_package_with_target_installs_there
+    codex_target = File.join(@tmpdir, "codex-home")
+    FileUtils.mkdir_p(File.join(@repo, "codex"))
+    File.write(File.join(@repo, "codex", "config.toml"), "x")
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo, packages: %w[config codex], targets: {"codex" => codex_target})]
+    )
+
+    output = capture_io { Dotlayer::Commands::Install.new(config:, detector: stub_detector).run }.first
+
+    assert File.symlink?(File.join(codex_target, "config.toml"))
+    refute File.exist?(File.join(@target, "config.toml"))
+    assert File.symlink?(File.join(@target, ".config", "test", "config.yml"))
+    assert_match(/2 package/, output)
+  end
+
+  def test_backup_uses_the_package_target
+    codex_target = File.join(@tmpdir, "codex-home")
+    FileUtils.mkdir_p([File.join(@repo, "codex"), codex_target])
+    File.write(File.join(@repo, "codex", "config.toml"), "repo")
+    File.write(File.join(codex_target, "config.toml"), "mine")
+    config = stub_config(
+      target: @target,
+      repos: [build_repo(path: @repo, packages: %w[codex], targets: {"codex" => codex_target})]
+    )
+
+    capture_io { Dotlayer::Commands::Install.new(config:, detector: stub_detector, backup: true).run }
+
+    assert File.symlink?(File.join(codex_target, "config.toml"))
+    moved = Dir.glob(File.join(@target, "dotfiles-conflicts-*", "**", "config.toml"))
+    assert_equal ["mine"], moved.map { |f| File.read(f) }
+  end
+
   def test_skips_system_files_when_no_repos
     config = stub_config(
       target: @target,

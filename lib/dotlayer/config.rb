@@ -1,10 +1,17 @@
 require "yaml"
 
 module Dotlayer
-  Repo = Data.define(:path, :private, :packages, :standalone_packages, :group_packages)
+  # targets maps explicitly listed package names to their own target
+  # (already expanded); packages without an entry use the global target.
+  Repo = Data.define(:path, :private, :packages, :standalone_packages, :group_packages, :targets) do
+    def initialize(targets: {}, **rest)
+      super
+    end
+  end
 
   class Config
     DEFAULT_PACKAGES = %w[stow bin git zsh config].freeze
+    PACKAGE_KEYS = %w[name target].freeze
     DEFAULT_CONFIG_PATHS = %w[
       ~/.config/dotlayer/dotlayer.yml
       ~/.public_dotfiles/dotlayer.yml
@@ -16,6 +23,7 @@ module Dotlayer
     def initialize(path = nil)
       @path = path || discover_config
       @data = load_config
+      validate_packages
     end
 
     def target
@@ -27,18 +35,33 @@ module Dotlayer
         path = entry["path"]&.to_s
         next if path.nil? || path.empty?
 
-        Repo.new(
-          path: File.expand_path(path),
-          private: entry["private"] || false,
-          packages: entry["packages"]&.freeze,
-          standalone_packages: entry["standalone_packages"]&.freeze,
-          group_packages: entry["group_packages"] || {}
-        )
+        build_repo(entry, path)
       end.freeze
     end
 
     def packages
-      @packages ||= @data.fetch("packages") { DEFAULT_PACKAGES }.freeze
+      top_level_packages.first
+    end
+
+    # Targets set on top-level `packages:` entries, by package name.
+    def package_targets
+      top_level_packages.last
+    end
+
+    # Where stow links a package: its own `target:` when it is listed with
+    # one, else (for a layered variant that is not listed itself, such as
+    # config-linux) the target of its base package, else the global target.
+    def target_for(repo_path, package)
+      repo = repos.find { |r| r.path == repo_path }
+      return target unless repo
+
+      targets = (repo.packages ? {} : package_targets).merge(repo.targets)
+      bases = repo.packages || packages
+      listed = bases + Array(repo.standalone_packages) + repo.group_packages.values.flatten
+      return targets.fetch(package, target) if listed.include?(package)
+
+      base = bases.select { |b| targets.key?(b) && package.start_with?("#{b}-") }.max_by(&:length)
+      base ? targets[base] : target
     end
 
     def profile_detect
@@ -74,6 +97,77 @@ module Dotlayer
     end
 
     private
+
+    # Parse package lists now, so a bad entry fails the command up front.
+    def validate_packages
+      packages
+      repos
+    end
+
+    def top_level_packages
+      @top_level_packages ||= begin
+        names, targets = parse_packages(@data.fetch("packages") { DEFAULT_PACKAGES }, "packages")
+        [names.freeze, targets.freeze]
+      end
+    end
+
+    def build_repo(entry, path)
+      targets = {}
+      packages, base_targets = parse_packages(entry["packages"], "repo #{path} packages")
+      standalone, standalone_targets = parse_packages(entry["standalone_packages"], "repo #{path} standalone_packages")
+      groups = (entry["group_packages"] || {}).to_h do |group, list|
+        names, group_targets = parse_packages(list, "repo #{path} group_packages.#{group}")
+        targets.merge!(group_targets)
+        [group, names]
+      end
+      targets.merge!(base_targets, standalone_targets)
+
+      Repo.new(
+        path: File.expand_path(path),
+        private: entry["private"] || false,
+        packages: packages&.freeze,
+        standalone_packages: standalone&.freeze,
+        group_packages: groups,
+        targets:
+      )
+    end
+
+    # A package entry is a name, or {name:, target:}. Returns the names (nil
+    # when the list is absent) and a {name => expanded target} hash.
+    def parse_packages(list, where)
+      return [nil, {}] if list.nil?
+
+      abort "Error: #{where} in #{@path} must be a list" unless list.is_a?(Array)
+
+      targets = {}
+      names = list.map do |entry|
+        name, target = parse_package(entry, where)
+        targets[name] = target if target
+        name
+      end
+      [names, targets]
+    end
+
+    def parse_package(entry, where)
+      return [entry, nil] if entry.is_a?(String) && !entry.empty?
+
+      unless entry.is_a?(Hash)
+        abort "Error: #{where} in #{@path}: each package must be a name or a {name:, target:} mapping, got #{entry.inspect}"
+      end
+
+      unknown = entry.keys - PACKAGE_KEYS
+      abort "Error: #{where} in #{@path}: unknown package key(s) #{unknown.join(", ")} (allowed: #{PACKAGE_KEYS.join(", ")})" if unknown.any?
+
+      name = entry["name"]
+      abort "Error: #{where} in #{@path}: package #{entry.inspect} needs a name" unless name.is_a?(String) && !name.empty?
+
+      target = entry["target"]
+      return [name, nil] if target.nil?
+
+      abort "Error: #{where} in #{@path}: target for #{name} must be a non-empty path" unless target.is_a?(String) && !target.empty?
+
+      [name, File.expand_path(target)]
+    end
 
     def load_config
       return {} unless @path && File.exist?(@path)
