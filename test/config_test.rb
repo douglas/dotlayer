@@ -325,6 +325,55 @@ class ConfigTest < Minitest::Test
     refute load_config("profiles: {env: X}\n").profile_detect_configured?
   end
 
+  def test_discovery_order
+    with_home do |home|
+      write_config(home, ".public_dotfiles/config/.config/dotlayer/dotlayer.yml", "target: /public\n")
+      assert_equal "/public", Dotlayer::Config.new.target
+      assert_equal "discovered", Dotlayer::Config.new.source
+
+      write_config(home, ".private_dotfiles/config/.config/dotlayer/dotlayer.yml", "target: /private\n")
+      assert_equal "/private", Dotlayer::Config.new.target
+
+      write_config(home, ".config/dotlayer/dotlayer.yml", "target: /stowed\n")
+      assert_equal "/stowed", Dotlayer::Config.new.target
+      assert_equal File.join(home, ".config/dotlayer/dotlayer.yml"), Dotlayer::Config.new.path
+    end
+  end
+
+  def test_env_var_is_checked_first
+    with_home do |home|
+      write_config(home, ".config/dotlayer/dotlayer.yml", "target: /stowed\n")
+      custom = write_config(home, "custom.yml", "target: /custom\n")
+      ENV["DOTLAYER_CONFIG"] = custom
+
+      config = Dotlayer::Config.new
+
+      assert_equal "/custom", config.target
+      assert_equal "$DOTLAYER_CONFIG", config.source
+    end
+  end
+
+  def test_env_var_pointing_nowhere_falls_through
+    with_home do |home|
+      write_config(home, ".config/dotlayer/dotlayer.yml", "target: /stowed\n")
+      ENV["DOTLAYER_CONFIG"] = File.join(home, "missing.yml")
+
+      assert_equal "/stowed", Dotlayer::Config.new.target
+    end
+  end
+
+  def test_explicit_path_wins_and_is_labelled
+    with_home do |home|
+      write_config(home, ".config/dotlayer/dotlayer.yml", "target: /stowed\n")
+      custom = write_config(home, "custom.yml", "target: /custom\n")
+
+      config = Dotlayer::Config.new(custom)
+
+      assert_equal "/custom", config.target
+      assert_equal "-c", config.source
+    end
+  end
+
   private
 
   def load_config(yaml)
@@ -333,5 +382,24 @@ class ConfigTest < Minitest::Test
       File.write(path, yaml)
       Dotlayer::Config.new(path)
     end
+  end
+
+  def with_home
+    Dir.mktmpdir do |home|
+      original = ENV.values_at("HOME", "DOTLAYER_CONFIG")
+      ENV["HOME"] = home
+      ENV.delete("DOTLAYER_CONFIG")
+      yield home
+    ensure
+      ENV["HOME"], config_env = original
+      config_env ? ENV["DOTLAYER_CONFIG"] = config_env : ENV.delete("DOTLAYER_CONFIG")
+    end
+  end
+
+  def write_config(home, relative, text)
+    path = File.join(home, relative)
+    FileUtils.mkdir_p(File.dirname(path))
+    File.write(path, text)
+    path
   end
 end

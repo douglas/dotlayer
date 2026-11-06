@@ -150,10 +150,15 @@ machines:
 
 `model:` is a case-sensitive substring match against the text dotlayer reads itself: `/sys/class/dmi/id/{product_name,product_version,board_name}` and, if present, `/proc/device-tree/model` (NULs stripped). Run `dotlayer status` to see every non-empty source and write a rule from it. Without a `profiles: detect:` command, the profile comes from DMI `chassis_type` (laptop: 8, 9, 10, 14, 30, 31, 32; desktop: 3 to 7, 15, 16, 35), then `hostnamectl chassis`, else `desktop`.
 
-Config file is discovered automatically from:
+Config file is discovered automatically, first match wins:
+- `-c PATH`, when given
+- `$DOTLAYER_CONFIG`
 - `~/.config/dotlayer/dotlayer.yml`
+- `~/.private_dotfiles/config/.config/dotlayer/dotlayer.yml` and `~/.public_dotfiles/config/.config/dotlayer/dotlayer.yml`, where the stowed file lives on a fresh machine before it is linked
 - `~/.public_dotfiles/dotlayer.yml`
 - `~/.dotfiles/dotlayer.yml`
+
+`dotlayer status` prints which file was used and why; `-v` prints it to stderr for any command.
 
 ## Public and private dotfiles
 

@@ -114,6 +114,8 @@ Distros:  for each configured distro, run detect command → collect successes
 Groups:   for each configured group, run detect command → collect successes
 ```
 
+Config discovery (`Config#discover_config`): `$DOTLAYER_CONFIG`, then `~/.config/dotlayer/dotlayer.yml`, the conventional `config/.config/dotlayer/dotlayer.yml` in `~/.private_dotfiles` and `~/.public_dotfiles`, then the older `~/.public_dotfiles/dotlayer.yml` and `~/.dotfiles/dotlayer.yml`. `Config#source` records how the file was chosen.
+
 `Model.read(root:)` reads the DMI and device-tree files that `model:` rules match against (root is injectable; tests use `test/fixtures/hw/*`). `Detection#model` carries the text for `status`.
 
 Machine, distro, and group detection is config-driven. Each entry in `dotlayer.yml` has a `detect`

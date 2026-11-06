@@ -11,6 +11,7 @@ module Dotlayer
       options = parse_global_options(argv)
       command = argv.shift
       config = Config.new(options[:config])
+      warn "Using config: #{config.path || "(none, defaults)"} (#{config.source})" if options[:verbose] && command
 
       case command
       when "status" then Commands::Status.new(config:).run

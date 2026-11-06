@@ -12,15 +12,21 @@ module Dotlayer
   class Config
     DEFAULT_PACKAGES = %w[stow bin git zsh config].freeze
     PACKAGE_KEYS = %w[name target].freeze
+    ENV_CONFIG = "DOTLAYER_CONFIG".freeze
+    # Checked in order, after $DOTLAYER_CONFIG. The two dotfiles-repo paths are
+    # where a stowed ~/.config/dotlayer/dotlayer.yml lives before it is linked.
     DEFAULT_CONFIG_PATHS = %w[
       ~/.config/dotlayer/dotlayer.yml
+      ~/.private_dotfiles/config/.config/dotlayer/dotlayer.yml
+      ~/.public_dotfiles/config/.config/dotlayer/dotlayer.yml
       ~/.public_dotfiles/dotlayer.yml
       ~/.dotfiles/dotlayer.yml
     ].freeze
 
-    attr_reader :path
+    attr_reader :path, :source
 
     def initialize(path = nil)
+      @source = path ? "-c" : nil
       @path = path || discover_config
       @data = load_config
       validate_packages
@@ -208,6 +214,13 @@ module Dotlayer
     end
 
     def discover_config
+      from_env = ENV[ENV_CONFIG].to_s
+      if !from_env.empty? && File.exist?(File.expand_path(from_env))
+        @source = "$#{ENV_CONFIG}"
+        return File.expand_path(from_env)
+      end
+
+      @source = "discovered"
       DEFAULT_CONFIG_PATHS
         .map { |p| File.expand_path(p) }
         .find { |p| File.exist?(p) }

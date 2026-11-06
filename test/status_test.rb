@@ -95,6 +95,18 @@ class StatusTest < Minitest::Test
     assert_match(%r{Model:\s+21RV000NUS  \(/sys/class/dmi/id/product_name\)}, output)
   end
 
+  def test_prints_which_config_file_was_used
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "dotlayer.yml")
+      File.write(path, "packages: [config]\n")
+      config = Dotlayer::Config.new(path)
+
+      output = capture_io { Dotlayer::Commands::Status.new(config:, detector: stub_detector).run }.first
+
+      assert_match(/Config:\s+#{Regexp.escape(path)} \(-c\)/, output)
+    end
+  end
+
   def test_prints_none_when_no_model_could_be_read
     config = stub_config(repos: [build_repo(path: "/nonexistent/repo")], packages: %w[config])
 

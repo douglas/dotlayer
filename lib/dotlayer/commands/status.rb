@@ -21,6 +21,7 @@ module Dotlayer
 
       def print_detection(detection)
         heading "System Detection"
+        puts "  Config:     #{config_label}"
         puts "  OS:         #{detection.os}"
         puts "  Profile:    #{detection.profile}"
         puts "  Machine:    #{detection.machine}"
@@ -28,6 +29,12 @@ module Dotlayer
         puts "  Distros:    #{detection.distros.empty? ? "(none)" : detection.distros.join(", ")}"
         puts "  Groups:     #{detection.groups.empty? ? "(none)" : detection.groups.join(", ")}"
         puts
+      end
+
+      def config_label
+        return "(none found, using defaults)" unless @config.path
+
+        "#{tilde(@config.path)} (#{@config.source})"
       end
 
       # Every source a `model:` rule can match, so users can write rules.

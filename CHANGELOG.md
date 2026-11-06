@@ -17,6 +17,10 @@ All notable changes to dotlayer. Versions follow [Semantic Versioning](https://s
   `machines:` block, keeping the rest of the file as text, and scaffolds the
   machine's layer dir in the first repo, copied from `--from` without
   `hypr/monitors.lua`.
+- Config discovery also checks `$DOTLAYER_CONFIG` first, and the stowed file's
+  home in the repos (`~/.private_dotfiles/config/.config/dotlayer/dotlayer.yml`,
+  then `~/.public_dotfiles/...`) when `~/.config/dotlayer/dotlayer.yml` does not
+  exist yet. `status` shows which file was used; `-v` prints it to stderr.
 - Without `profiles: detect:`, the profile comes from DMI `chassis_type`, then
   `hostnamectl chassis`, else `desktop`.
 

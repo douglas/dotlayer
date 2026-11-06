@@ -91,4 +91,15 @@ class CLITest < Minitest::Test
       assert_match(/dry-run/, output)
     end
   end
+
+  def test_verbose_says_which_config_was_used
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "dotlayer.yml")
+      File.write(path, "repos: []\n")
+
+      error = capture_io { Dotlayer::CLI.new.run(["-v", "-c", path, "status"]) }.last
+
+      assert_match(/Using config: #{Regexp.escape(path)} \(-c\)/, error)
+    end
+  end
 end
