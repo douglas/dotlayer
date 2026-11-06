@@ -24,9 +24,19 @@ module Dotlayer
         puts "  OS:         #{detection.os}"
         puts "  Profile:    #{detection.profile}"
         puts "  Machine:    #{detection.machine}"
+        print_model(detection.model)
         puts "  Distros:    #{detection.distros.empty? ? "(none)" : detection.distros.join(", ")}"
         puts "  Groups:     #{detection.groups.empty? ? "(none)" : detection.groups.join(", ")}"
         puts
+      end
+
+      # Every source a `model:` rule can match, so users can write rules.
+      def print_model(model)
+        if model.empty?
+          puts "  Model:      (none read)"
+        else
+          model.each { |source, text| puts "  Model:      #{text}  (#{source})" }
+        end
       end
 
       def tilde(path)

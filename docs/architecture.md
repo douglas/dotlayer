@@ -80,7 +80,7 @@ The codebase follows a four-layer architecture with unidirectional data flow. Lo
 ### Detection (value object)
 
 ```ruby
-Detection = Data.define(:os, :profile, :machine, :distros, :groups)
+Detection = Data.define(:os, :profile, :machine, :distros, :groups, :model)
 ```
 
 Immutable value object produced by `Detector`. Carries the machine identity through the system. Uses Ruby 3.2+ `Data.define` — frozen by default, structural equality, pattern matching support.
@@ -108,11 +108,13 @@ Produces a `Detection` by probing the system. Each detection axis has a fallback
 
 ```
 OS:       RbConfig host_os → pattern match → "unknown"
-Profile:  ENV var → shell command → "desktop"
-Machine:  ENV var → configured shell commands → hostname -s → "unknown"
+Profile:  ENV var → `profiles.detect` command (if set) → DMI chassis_type → hostnamectl chassis → "desktop"
+Machine:  ENV var → configured rules (`model:` substring or `detect:` command) → hostname -s → "unknown"
 Distros:  for each configured distro, run detect command → collect successes
 Groups:   for each configured group, run detect command → collect successes
 ```
+
+`Model.read(root:)` reads the DMI and device-tree files that `model:` rules match against (root is injectable; tests use `test/fixtures/hw/*`). `Detection#model` carries the text for `status`.
 
 Machine, distro, and group detection is config-driven. Each entry in `dotlayer.yml` has a `detect`
 shell command. The command runs via `Open3.capture2e("sh", "-c", cmd)` and the entry is considered

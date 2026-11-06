@@ -66,8 +66,8 @@ Dotlayer auto-detects five things about your system:
 | Detection | Method | Example |
 |-----------|--------|---------|
 | **OS** | `RbConfig::CONFIG["host_os"]` | `linux`, `macos` |
-| **Profile** | `hostnamectl chassis` or `$DOTLAYER_PROFILE` | `desktop`, `laptop` |
-| **Machine** | `$DOTLAYER_MACHINE`, configured shell commands, then `hostname -s` fallback | `t14`, `framework-desktop` |
+| **Profile** | `$DOTLAYER_PROFILE`, a `profiles: detect:` command, else DMI `chassis_type` then `hostnamectl chassis` | `desktop`, `laptop` |
+| **Machine** | `$DOTLAYER_MACHINE`, configured `model:` or `detect:` rules, then `hostname -s` fallback | `t14`, `framework-desktop` |
 | **Distro** | Shell commands from config | `omarchy`, `fedora` |
 | **Group** | Shell commands from config | `work`, `mycompany` |
 
@@ -132,6 +132,23 @@ hooks:
   after_system_files:
     - sudo udevadm control --reload-rules
 ```
+
+#### Machine rules
+
+A machine matches by hardware model or by a shell command. Use one of `model:` or `detect:` per machine (both, or neither, is a config error):
+
+```yaml
+machines:
+  env: DOTLAYER_MACHINE
+  p14s:
+    model: ThinkPad P14s          # a string, or a list: the machine matches if any entry matches
+  fw13:
+    model: [Laptop 13, Framework]
+  odd:
+    detect: test -d /sys/class/foo   # shell command, exit 0 means match
+```
+
+`model:` is a case-sensitive substring match against the text dotlayer reads itself: `/sys/class/dmi/id/{product_name,product_version,board_name}` and, if present, `/proc/device-tree/model` (NULs stripped). Run `dotlayer status` to see every non-empty source and write a rule from it. Without a `profiles: detect:` command, the profile comes from DMI `chassis_type` (laptop: 8, 9, 10, 14, 30, 31, 32; desktop: 3 to 7, 15, 16, 35), then `hostnamectl chassis`, else `desktop`.
 
 Config file is discovered automatically from:
 - `~/.config/dotlayer/dotlayer.yml`

@@ -6,6 +6,15 @@ All notable changes to dotlayer. Versions follow [Semantic Versioning](https://s
 
 ### Added
 
+- Machines can match by hardware model instead of a shell command:
+  `model: ThinkPad P14s` (or a list). dotlayer reads
+  `/sys/class/dmi/id/{product_name,product_version,board_name}` and
+  `/proc/device-tree/model` itself and matches case-sensitive substrings. A
+  machine has `detect:` or `model:`, not both. `status` prints each model text
+  it read, to write rules from.
+- Without `profiles: detect:`, the profile comes from DMI `chassis_type`, then
+  `hostnamectl chassis`, else `desktop`.
+
 - Per-package target: a package entry in `packages:` (top-level or per repo),
   `standalone_packages:` or `group_packages:` may be `{name: codex, target:
   ~/.codex}` instead of a name. The target replaces the global `target:` for

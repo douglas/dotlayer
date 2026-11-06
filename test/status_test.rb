@@ -83,6 +83,26 @@ class StatusTest < Minitest::Test
     FileUtils.rm_rf(tmpdir)
   end
 
+  def test_prints_the_model_text_with_its_source
+    model = {"/sys/class/dmi/id/product_name" => "21RV000NUS", "/sys/class/dmi/id/product_version" => "ThinkPad P14s Gen 6 AMD"}
+    config = stub_config(repos: [build_repo(path: "/nonexistent/repo")], packages: %w[config])
+
+    output = capture_io {
+      Dotlayer::Commands::Status.new(config:, detector: stub_detector(build_detection(model:))).run
+    }.first
+
+    assert_match(%r{Model:\s+ThinkPad P14s Gen 6 AMD  \(/sys/class/dmi/id/product_version\)}, output)
+    assert_match(%r{Model:\s+21RV000NUS  \(/sys/class/dmi/id/product_name\)}, output)
+  end
+
+  def test_prints_none_when_no_model_could_be_read
+    config = stub_config(repos: [build_repo(path: "/nonexistent/repo")], packages: %w[config])
+
+    output = capture_io { Dotlayer::Commands::Status.new(config:, detector: stub_detector).run }.first
+
+    assert_match(/Model:\s+\(none read\)/, output)
+  end
+
   def test_shows_target_only_when_it_differs
     Dir.mktmpdir do |tmpdir|
       FileUtils.mkdir_p([File.join(tmpdir, "config"), File.join(tmpdir, "codex")])

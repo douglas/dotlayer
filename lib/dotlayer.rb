@@ -6,6 +6,7 @@ module Dotlayer
   autoload :ConflictBackup, "dotlayer/conflict_backup"
   autoload :Detection, "dotlayer/detector"
   autoload :Detector, "dotlayer/detector"
+  autoload :Model, "dotlayer/model"
   autoload :Output, "dotlayer/output"
   autoload :Repo, "dotlayer/config"
   autoload :Resolver, "dotlayer/resolver"

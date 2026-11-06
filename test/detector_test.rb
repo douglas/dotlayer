@@ -151,4 +151,63 @@ class DetectorTest < Minitest::Test
 
     assert_equal "desktop", detection.profile
   end
+
+  def test_machine_matches_by_model_text
+    machines = {
+      "t14" => {"model" => "ThinkPad T14"},
+      "p14s" => {"model" => ["ThinkPad X1", "P14s Gen 6"]},
+      "fw13" => {"model" => "Laptop 13"}
+    }
+
+    assert_equal "p14s", detect_machine(machines, "lenovo")
+    assert_equal "fw13", detect_machine(machines, "framework")
+  end
+
+  def test_machine_model_rules_read_the_device_tree
+    assert_equal "mbp14", detect_machine({"mbp14" => {"model" => "MacBook Pro (14-inch"}}, "apple")
+  end
+
+  def test_detect_and_model_rules_can_mix
+    machines = {"a" => {"detect" => "false"}, "b" => {"detect" => "true"}, "c" => {"model" => "P14s"}}
+
+    assert_equal "b", detect_machine(machines, "lenovo")
+  end
+
+  def test_detection_carries_the_model_text
+    detection = detector(stub_config, "apple").detect
+
+    assert_equal({"/proc/device-tree/model" => "Apple MacBook Pro (14-inch, 2023)"}, detection.model)
+  end
+
+  def test_profile_defaults_to_dmi_chassis_type_without_a_detect_command
+    ENV.delete("DOTLAYER_PROFILE")
+
+    assert_equal "laptop", detector(stub_config, "lenovo").detect.profile
+  end
+
+  def test_chassis_desktop_types
+    Dir.mktmpdir do |root|
+      FileUtils.mkdir_p(File.join(root, "sys/class/dmi/id"))
+      File.write(File.join(root, "sys/class/dmi/id/chassis_type"), "3\n")
+
+      assert_equal "desktop", Dotlayer::Detector.new(config: stub_config, root:).detect.profile
+    end
+  end
+
+  def test_configured_profile_detect_still_wins_over_chassis
+    config = stub_config(profile_detect: "echo desktop", profile_env: "DOTLAYER_TEST_NONEXISTENT")
+
+    assert_equal "desktop", detector(config, "lenovo").detect.profile
+  end
+
+  private
+
+  def detector(config, hardware)
+    Dotlayer::Detector.new(config:, root: File.expand_path("fixtures/hw/#{hardware}", __dir__))
+  end
+
+  def detect_machine(machines, hardware)
+    ENV.delete("DOTLAYER_MACHINE")
+    detector(stub_config(machines:), hardware).detect.machine
+  end
 end

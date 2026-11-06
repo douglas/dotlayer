@@ -291,6 +291,40 @@ class ConfigTest < Minitest::Test
     end
   end
 
+  def test_machine_rules_accept_detect_or_model
+    config = load_config(<<~YAML)
+      machines:
+        env: MY_MACHINE
+        a:
+          detect: "true"
+        b:
+          model: ThinkPad T14
+        c:
+          model: [one, two]
+    YAML
+
+    assert_equal %w[env a b c], config.machines.keys
+  end
+
+  def test_machine_rule_errors
+    {
+      "machines:\n  a:\n    detect: 'true'\n    model: x\n" => /has both detect: and model:/,
+      "machines:\n  a: {}\n" => /needs detect: or model:/,
+      "machines:\n  a:\n    model: ''\n" => /model: must be a string or a list of strings/,
+      "machines:\n  a:\n    model: [1]\n" => /model: must be a string or a list of strings/,
+      "machines:\n  a: nope\n" => /must be a mapping/
+    }.each do |yaml, message|
+      stderr = capture_io { assert_raises(SystemExit) { load_config(yaml) } }.last
+
+      assert_match(message, stderr)
+    end
+  end
+
+  def test_profile_detect_configured
+    assert load_config("profiles:\n  detect: echo laptop\n").profile_detect_configured?
+    refute load_config("profiles: {env: X}\n").profile_detect_configured?
+  end
+
   private
 
   def load_config(yaml)

@@ -24,6 +24,7 @@ module Dotlayer
       @path = path || discover_config
       @data = load_config
       validate_packages
+      validate_machines
     end
 
     def target
@@ -68,6 +69,11 @@ module Dotlayer
       @data.dig("profiles", "detect") || "hostnamectl chassis"
     end
 
+    # False when profiles: has no detect, so the detector uses DMI chassis_type.
+    def profile_detect_configured?
+      !@data.dig("profiles", "detect").nil?
+    end
+
     def profile_env
       @data.dig("profiles", "env") || "DOTLAYER_PROFILE"
     end
@@ -102,6 +108,27 @@ module Dotlayer
     def validate_packages
       packages
       repos
+    end
+
+    # Each machine rule needs exactly one of detect: (shell) or model: (text).
+    def validate_machines
+      machines.each do |name, entry|
+        next if name == "env"
+
+        unless entry.is_a?(Hash)
+          abort "Error: machine #{name} in #{@path} must be a mapping with detect: or model:"
+        end
+        both = entry.key?("detect") && entry.key?("model")
+        abort "Error: machine #{name} in #{@path} has both detect: and model:, use one" if both
+        abort "Error: machine #{name} in #{@path} needs detect: or model:" unless entry.key?("detect") || entry.key?("model")
+
+        patterns = entry["model"]
+        next unless entry.key?("model")
+
+        valid = (patterns.is_a?(String) && !patterns.empty?) ||
+          (patterns.is_a?(Array) && patterns.any? && patterns.all? { |p| p.is_a?(String) && !p.empty? })
+        abort "Error: machine #{name} in #{@path}: model: must be a string or a list of strings" unless valid
+      end
     end
 
     def top_level_packages

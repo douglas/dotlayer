@@ -14,6 +14,7 @@ module TestConfigHelper
     overrides.each do |method, value|
       config.define_singleton_method(method) { value }
     end
+    config.define_singleton_method(:profile_detect_configured?) { true } if overrides.key?(:profile_detect)
     config
   end
 
@@ -21,8 +22,8 @@ module TestConfigHelper
     Dotlayer::Repo.new(path:, private:, packages:, standalone_packages:, group_packages:, targets:)
   end
 
-  def build_detection(os: "linux", profile: "desktop", machine: "test-machine", distros: [], groups: [])
-    Dotlayer::Detection.new(os:, profile:, machine:, distros:, groups:)
+  def build_detection(os: "linux", profile: "desktop", machine: "test-machine", distros: [], groups: [], model: {})
+    Dotlayer::Detection.new(os:, profile:, machine:, distros:, groups:, model:)
   end
 
   # StringIO is never a TTY; install only prompts on one.
