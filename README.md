@@ -299,6 +299,7 @@ Commands:
   status      Show detected OS, profile, distros, groups, and packages
   doctor      Check for broken/dangling symlinks, missing repos, missing stow
   adopt       Move config files into a stow package and restow
+  machine     machine add <name>: add a model rule and scaffold the machine's layer
   version     Print version
 
 Options:
@@ -341,6 +342,20 @@ Exit status: `0` when nothing would change, `1` when changes are pending (so it 
 Checks that stow is installed, repos and packages exist, that managed config paths have no broken symlinks, and that every managed file is still a link: an app that saves by replacing the file leaves a plain file there, which `install` would refuse to overwrite. It also scans the whole target dir (default `~`) for symlinks that point into a configured repo but whose target no longer exists. The scan skips `.cache`, `node_modules`, `.git`, `.local/share/Steam` and the repos themselves. It also skips other git checkouts (any directory with a `.git`, like `~/src/*`), unless a package ships files into that path, since stow only links there in that case. It never follows directory symlinks, and stops at `--depth` levels (default 6). It only reports: each dangling link is listed with its target, followed by a suggested `rm` command.
 
 Exit status: `0` when no issues are found, `1` otherwise.
+
+### machine add
+
+```
+dotlayer machine add <name> [--match TEXT] [--profile laptop|desktop] [--from MACHINE] [--distro NAME] [--dry-run]
+```
+
+Adds a machine to the config file in use (`-c`, or the discovered one). It inserts a `model:` rule as the last entry of the `machines:` block, as text, so comments and layout stay as they are, and creates the layer dir in the first repo, named the way the resolver finds it: `<base>-<distro>-<profile>-<name>` (for example `config-omarchy-laptop-p14s`), or `<base>-<name>` when no distro is detected. `<base>` is `config` when it is a base package.
+
+- `--match` is the text the model contains. Default: the longest of the model fields this machine reports (the same text `status` prints, without `board_name`). Quotes and backslashes are rejected.
+- `--profile` defaults to the detected profile.
+- `--from` copies that machine's layer, except `.config/hypr/monitors.lua`. Without it the layer dir is created empty.
+- `--distro` is required when several distros are detected.
+- It refuses a machine or layer that already exists. `--dry-run` prints the plan and writes nothing. Nothing is committed.
 
 ### adopt
 

@@ -18,6 +18,7 @@ module Dotlayer
     autoload :Diff, "dotlayer/commands/diff"
     autoload :Doctor, "dotlayer/commands/doctor"
     autoload :Install, "dotlayer/commands/install"
+    autoload :MachineAdd, "dotlayer/commands/machine_add"
     autoload :Status, "dotlayer/commands/status"
     autoload :Update, "dotlayer/commands/update"
   end

@@ -245,6 +245,8 @@ Commands accept `config:`, `detector:`, `dry_run:`, `verbose:` via constructor i
 
 **ConflictBackup** (`install --backup`) runs before each package is stowed. It walks the package dir for candidate files, keeps those whose path under the target is a real file or a link pointing outside the configured repos, and asks a stow simulation which of them stow would refuse (so stow's ignore rules apply without being copied). Identical real files are deleted; the rest move to a per-run `~/dotfiles-conflicts-<timestamp>/`.
 
+**MachineAdd** (`machine add`) reads the detection, builds the layer name like the resolver does, copies the `--from` layer (minus `.config/hypr/monitors.lua`) and inserts the `model:` rule with `MachineAdd.insert_rule`, a text edit of the `machines:` block so the rest of the file is untouched.
+
 **Adopt** finds the appropriate repo (private if `-p` flag, else first repo with the package, else first repo), moves each path into the package preserving the directory structure relative to target, then restows.
 
 ## Data flow

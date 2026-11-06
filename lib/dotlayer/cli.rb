@@ -21,6 +21,7 @@ module Dotlayer
       when "diff" then exit(1) unless Commands::Diff.new(config:).run
       when "doctor" then exit(1) unless Commands::Doctor.new(config:, max_depth: options[:depth]).run
       when "adopt" then run_adopt(config:, argv:, options:)
+      when "machine" then run_machine(config:, argv:, options:)
       when "version"
         puts "dotlayer #{VERSION}"
       else
@@ -31,7 +32,8 @@ module Dotlayer
     private
 
     def parse_global_options(argv)
-      options = {dry_run: false, verbose: false, config: nil, private: false, depth: nil, yes: false, backup: false}
+      options = {dry_run: false, verbose: false, config: nil, private: false, depth: nil, yes: false, backup: false,
+                 match: nil, from: nil, distro: nil, profile: nil}
 
       OptionParser.new do |opts|
         opts.on("-c", "--config PATH", "Config file path") { |v| options[:config] = v }
@@ -39,6 +41,10 @@ module Dotlayer
         opts.on("-v", "--verbose", "Verbose output") { options[:verbose] = true }
         opts.on("-y", "--yes", "Answer yes to install prompts (needed without a terminal)") { options[:yes] = true }
         opts.on("--backup", "install: move or delete files that block stow") { options[:backup] = true }
+        opts.on("--match TEXT", "machine add: text the model contains") { |v| options[:match] = v }
+        opts.on("--from MACHINE", "machine add: machine whose layer to copy") { |v| options[:from] = v }
+        opts.on("--distro NAME", "machine add: distro of the layer") { |v| options[:distro] = v }
+        opts.on("--profile NAME", "machine add: laptop or desktop") { |v| options[:profile] = v }
         opts.on("-p", "--private", "Use private repo") { options[:private] = true }
         opts.on("--depth N", Integer, "Max depth for doctor's dangling-link scan") { |v| options[:depth] = v }
       end.parse!(argv)
@@ -61,6 +67,20 @@ module Dotlayer
       ).run
     end
 
+    def run_machine(config:, argv:, options:)
+      sub = argv.shift
+      name = argv.shift
+      unless sub == "add" && name
+        abort "Usage: dotlayer machine add <name> [--match TEXT] [--profile laptop|desktop] " \
+          "[--from MACHINE] [--distro NAME] [--dry-run]"
+      end
+
+      Commands::MachineAdd.new(
+        config:, name:, match: options[:match], profile: options[:profile],
+        from: options[:from], distro: options[:distro], dry_run: options[:dry_run]
+      ).run
+    end
+
     def print_usage
       puts <<~USAGE
         Usage: dotlayer [options] <command>
@@ -72,6 +92,7 @@ module Dotlayer
           diff      Show what install would change (exit 1 if changes pending)
           doctor    Check for broken symlinks, conflicts, missing deps (exit 1 on issues)
           adopt     Move config into a stow package and restow
+          machine   machine add <name>: add a model rule and scaffold the machine's layer
           version   Print version
 
         Options:
@@ -79,6 +100,10 @@ module Dotlayer
           -n, --dry-run       Show what would be done without making changes
           -y, --yes           Answer yes to install prompts (required when stdin is not a terminal)
               --backup        Install: delete identical blocking files, move others to ~/dotfiles-conflicts-<time>/
+              --match TEXT    machine add: text the model contains (default: read from this machine)
+              --from MACHINE  machine add: machine whose layer to copy
+              --distro NAME   machine add: distro of the layer (needed if several are detected)
+              --profile NAME  machine add: laptop or desktop (default: detected)
           -p, --private       Use private repo (for adopt command)
               --depth N       Max depth for doctor's dangling-link scan (default: 6)
           -v, --verbose       Verbose output

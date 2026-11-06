@@ -12,6 +12,11 @@ All notable changes to dotlayer. Versions follow [Semantic Versioning](https://s
   `/proc/device-tree/model` itself and matches case-sensitive substrings. A
   machine has `detect:` or `model:`, not both. `status` prints each model text
   it read, to write rules from.
+- `dotlayer machine add <name> [--match TEXT] [--profile P] [--from MACHINE]
+  [--distro D] [--dry-run]` writes a `model:` rule into the config's
+  `machines:` block, keeping the rest of the file as text, and scaffolds the
+  machine's layer dir in the first repo, copied from `--from` without
+  `hypr/monitors.lua`.
 - Without `profiles: detect:`, the profile comes from DMI `chassis_type`, then
   `hostnamectl chassis`, else `desktop`.
 
