@@ -142,6 +142,20 @@ class CLITest < Minitest::Test
     end
   end
 
+  def test_hooks_routes_and_validates_the_action
+    assert_raises(SystemExit) { capture_io { Dotlayer::CLI.new.run(["-c", "/nonexistent/dotlayer.yml", "hooks", "bogus"]) } }
+
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "dotlayer.yml")
+      File.write(path, "repos:\n  - path: #{dir}/dots\n")
+      system("git", "init", "-q", "#{dir}/dots")
+
+      capture_io { Dotlayer::CLI.new.run(["-c", path, "hooks", "install"]) }
+
+      assert File.exist?("#{dir}/dots/.git/hooks/post-merge")
+    end
+  end
+
   private
 
   # A repo with a config package and one system file, a fake sudo that just

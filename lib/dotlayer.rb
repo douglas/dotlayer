@@ -17,6 +17,7 @@ module Dotlayer
     autoload :Adopt, "dotlayer/commands/adopt"
     autoload :Diff, "dotlayer/commands/diff"
     autoload :Doctor, "dotlayer/commands/doctor"
+    autoload :Hooks, "dotlayer/commands/hooks"
     autoload :Install, "dotlayer/commands/install"
     autoload :MachineAdd, "dotlayer/commands/machine_add"
     autoload :Status, "dotlayer/commands/status"

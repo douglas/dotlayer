@@ -6,6 +6,13 @@ All notable changes to dotlayer. Versions follow [Semantic Versioning](https://s
 
 ### Added
 
+- `dotlayer hooks install|uninstall` writes `post-merge` and `post-rewrite` git
+  hooks into each configured repo that run `dotlayer install --quiet`, so a
+  plain `git pull` re-stows. They never prompt (pending system files only print
+  the "rerun with --yes" line), are idempotent through a marker comment, refuse
+  to overwrite a hook dotlayer did not write, and are not written when
+  `core.hooksPath` is set (the command says where to add them).
+- `install -q`/`--quiet` prints only failures and what needs `--yes`.
 - `--json` for `status`, `diff` and `doctor`: one JSON document on stdout, no
   colors, exit statuses unchanged. The shape is documented in the README.
 - Machines can match by hardware model instead of a shell command:

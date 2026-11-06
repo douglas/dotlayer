@@ -3,17 +3,38 @@ module Dotlayer
     class Install
       include Output
 
-      def initialize(config:, detector: nil, dry_run: false, verbose: false, yes: false, backup: false)
+      def initialize(config:, detector: nil, dry_run: false, verbose: false, yes: false, backup: false, quiet: false)
         @config = config
         @detector = detector || Detector.new(config: @config)
         @dry_run = dry_run
         @verbose = verbose
         @yes = yes
         @backup = backup
+        @quiet = quiet
+        @notices = []
         @system_failures = 0
       end
 
+      # With quiet: true nothing is printed on success except notices (system
+      # files that still need installing); on failure the full output is.
       def run
+        return run_install unless @quiet
+
+        original = $stdout
+        buffer = $stdout = StringIO.new
+        begin
+          run_install
+        rescue SystemExit
+          $stdout = original
+          puts buffer.string
+          raise
+        ensure
+          $stdout = original
+        end
+        @notices.each { |notice| warning notice }
+      end
+
+      def run_install
         detection = @detector.detect
         resolver = Resolver.new(config: @config, detection: detection)
         packages = resolver.resolve
@@ -88,8 +109,10 @@ module Dotlayer
 
       def approve_system_files(pending)
         if !@yes && !$stdin.tty?
-          warning "  #{pending.size} system file(s) need installing. " \
+          notice = "#{pending.size} system file(s) need installing. " \
             "Not a terminal, so nothing was asked: rerun with --yes to install them."
+          @notices << notice
+          warning "  #{notice}"
           return false
         end
 

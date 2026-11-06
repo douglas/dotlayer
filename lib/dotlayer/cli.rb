@@ -16,12 +16,13 @@ module Dotlayer
       case command
       when "status" then Commands::Status.new(config:, json: options[:json]).run
       when "install" then Commands::Install.new(
-        config:, dry_run: options[:dry_run], verbose: options[:verbose], yes: options[:yes], backup: options[:backup]
+        config:, dry_run: options[:dry_run], verbose: options[:verbose], yes: options[:yes], backup: options[:backup], quiet: options[:quiet]
       ).run
       when "update" then Commands::Update.new(config:, dry_run: options[:dry_run], verbose: options[:verbose]).run
       when "diff" then exit(1) unless Commands::Diff.new(config:, json: options[:json]).run
       when "doctor" then exit(1) unless Commands::Doctor.new(config:, max_depth: options[:depth], json: options[:json]).run
       when "adopt" then run_adopt(config:, argv:, options:)
+      when "hooks" then run_hooks(config:, argv:, options:)
       when "machine" then run_machine(config:, argv:, options:)
       when "version"
         puts "dotlayer #{VERSION}"
@@ -34,7 +35,7 @@ module Dotlayer
 
     def parse_global_options(argv)
       options = {dry_run: false, verbose: false, config: nil, private: false, depth: nil, yes: false, backup: false,
-                 json: false, match: nil, from: nil, distro: nil, profile: nil}
+                 quiet: false, json: false, match: nil, from: nil, distro: nil, profile: nil}
 
       OptionParser.new do |opts|
         opts.on("-c", "--config PATH", "Config file path") { |v| options[:config] = v }
@@ -42,6 +43,7 @@ module Dotlayer
         opts.on("-v", "--verbose", "Verbose output") { options[:verbose] = true }
         opts.on("-y", "--yes", "Answer yes to install prompts (needed without a terminal)") { options[:yes] = true }
         opts.on("--backup", "install: move or delete files that block stow") { options[:backup] = true }
+        opts.on("-q", "--quiet", "install: print only failures and what needs --yes") { options[:quiet] = true }
         opts.on("--json", "status, diff, doctor: print JSON instead of text") { options[:json] = true }
         opts.on("--match TEXT", "machine add: text the model contains") { |v| options[:match] = v }
         opts.on("--from MACHINE", "machine add: machine whose layer to copy") { |v| options[:from] = v }
@@ -69,6 +71,13 @@ module Dotlayer
       ).run
     end
 
+    def run_hooks(config:, argv:, options:)
+      action = argv.shift
+      abort "Usage: dotlayer hooks install|uninstall" unless %w[install uninstall].include?(action)
+
+      exit(1) unless Commands::Hooks.new(config:, action:, dry_run: options[:dry_run]).run
+    end
+
     def run_machine(config:, argv:, options:)
       sub = argv.shift
       name = argv.shift
@@ -94,6 +103,7 @@ module Dotlayer
           diff      Show what install would change (exit 1 if changes pending)
           doctor    Check for broken symlinks, conflicts, missing deps (exit 1 on issues)
           adopt     Move config into a stow package and restow
+          hooks     hooks install|uninstall: re-stow after git pull (post-merge, post-rewrite)
           machine   machine add <name>: add a model rule and scaffold the machine's layer
           version   Print version
 
@@ -102,6 +112,7 @@ module Dotlayer
           -n, --dry-run       Show what would be done without making changes
           -y, --yes           Answer yes to install prompts (required when stdin is not a terminal)
               --backup        Install: delete identical blocking files, move others to ~/dotfiles-conflicts-<time>/
+          -q, --quiet         install: print only failures and what needs --yes
               --json          status, diff, doctor: machine-readable output (see README)
               --match TEXT    machine add: text the model contains (default: read from this machine)
               --from MACHINE  machine add: machine whose layer to copy

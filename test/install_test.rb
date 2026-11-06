@@ -141,6 +141,37 @@ class InstallTest < Minitest::Test
     assert_equal ["mine"], moved.map { |f| File.read(f) }
   end
 
+  def test_quiet_prints_nothing_on_success
+    output = capture_io {
+      Dotlayer::Commands::Install.new(config: package_config, detector: stub_detector, quiet: true).run
+    }.first
+
+    assert_empty output
+    assert File.symlink?(File.join(@target, ".config", "test", "config.yml"))
+  end
+
+  def test_quiet_still_says_when_system_files_need_yes
+    config = system_files_config(changed: "new")
+
+    output = run_install(config, commands_run: [], stdin: StringIO.new(""), quiet: true)
+
+    assert_equal 1, output.lines.size
+    assert_match(/1 system file\(s\) need installing.*--yes/, output)
+  end
+
+  def test_quiet_prints_everything_on_failure
+    File.write(File.join(@target, ".config"), "conflict")
+
+    output = capture_io {
+      assert_raises(SystemExit) {
+        Dotlayer::Commands::Install.new(config: package_config, detector: stub_detector, quiet: true).run
+      }
+    }.first
+
+    assert_match(/Installing dotfiles/, output)
+    assert_match(/failed/, output)
+  end
+
   def test_skips_system_files_when_no_repos
     config = stub_config(
       target: @target,

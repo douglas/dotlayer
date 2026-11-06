@@ -290,7 +290,7 @@ Each layer adds files — they never conflict because different layers use diffe
 Your private repo doesn't need to be pushed anywhere. It works fine as a local-only git repo for tracking changes. If you do want backup:
 
 - Push to a **private GitHub/GitLab repo**
-- Use `dotlayer update` to pull both repos at once — it runs `git pull --rebase` on each repo that has a `.git` directory
+- Use `dotlayer update` to pull both repos at once — it runs `git pull --rebase` on each repo that has a `.git` directory, then re-stows. For a plain `git pull` in a repo, use `dotlayer hooks install` (see [hooks](#hooks))
 
 ## CLI reference
 
@@ -304,6 +304,7 @@ Commands:
   status      Show detected OS, profile, distros, groups, and packages
   doctor      Check for broken/dangling symlinks, missing repos, missing stow
   adopt       Move config files into a stow package and restow
+  hooks       hooks install|uninstall: re-stow after git pull
   machine     machine add <name>: add a model rule and scaffold the machine's layer
   version     Print version
 
@@ -313,6 +314,7 @@ Options:
       --backup        Install: delete identical blocking files, move different ones aside
   -y, --yes           Answer yes to install prompts (required without a terminal)
   -p, --private       Use private repo (for adopt command)
+  -q, --quiet         install: print only failures and what needs --yes
       --json          status, diff, doctor: print JSON instead of text
       --depth N       Max depth for doctor's dangling-link scan (default: 6)
   -v, --verbose       Verbose output
@@ -395,6 +397,21 @@ Exit status: `0` when nothing would change, `1` when changes are pending (so it 
 Checks that stow is installed, repos and packages exist, that managed config paths have no broken symlinks, and that every managed file is still a link: an app that saves by replacing the file leaves a plain file there, which `install` would refuse to overwrite. It also scans the whole target dir (default `~`) for symlinks that point into a configured repo but whose target no longer exists. The scan skips `.cache`, `node_modules`, `.git`, `.local/share/Steam` and the repos themselves. It also skips other git checkouts (any directory with a `.git`, like `~/src/*`), unless a package ships files into that path, since stow only links there in that case. It never follows directory symlinks, and stops at `--depth` levels (default 6). It only reports: each dangling link is listed with its target, followed by a suggested `rm` command.
 
 Exit status: `0` when no issues are found, `1` otherwise.
+
+### hooks
+
+```
+dotlayer hooks install     # or: hooks uninstall   (add --dry-run to preview)
+```
+
+Writes a `post-merge` hook (runs after `git pull`) and a `post-rewrite` hook (after `git pull --rebase`; it only acts when git says `rebase`) into each configured repo. Both run `dotlayer install --quiet </dev/null`, so a pull re-stows new files without a manual step. They never prompt: if system files need installing, the hook prints the "rerun with `--yes`" line and does nothing else. On failure the full output is printed. `dotlayer` must be on the PATH git runs with; a `-c PATH` you passed is baked into the hook.
+
+- Idempotent: hooks carry a `# dotlayer-managed-hook` marker line, and a second run changes nothing.
+- A hook that dotlayer did not write is never touched: the command says so and exits 1 (the other hook is still written).
+- If `core.hooksPath` is set in a repo, nothing is written there. The command prints what to add to the hooks in that directory.
+- `hooks uninstall` removes only hooks with the marker.
+
+`install --quiet` (`-q`) prints nothing on success except system files that still need `--yes`.
 
 ### machine add
 
