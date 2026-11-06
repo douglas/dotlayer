@@ -6,6 +6,8 @@ All notable changes to dotlayer. Versions follow [Semantic Versioning](https://s
 
 ### Added
 
+- `--json` for `status`, `diff` and `doctor`: one JSON document on stdout, no
+  colors, exit statuses unchanged. The shape is documented in the README.
 - Machines can match by hardware model instead of a shell command:
   `model: ThinkPad P14s` (or a list). dotlayer reads
   `/sys/class/dmi/id/{product_name,product_version,board_name}` and

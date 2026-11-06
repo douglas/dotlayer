@@ -1,11 +1,14 @@
+require "json"
+
 module Dotlayer
   module Commands
     class Status
       include Output
 
-      def initialize(config:, detector: nil)
+      def initialize(config:, detector: nil, json: false)
         @config = config
         @detector = detector || Detector.new(config: @config)
+        @json = json
       end
 
       def run
@@ -13,11 +16,29 @@ module Dotlayer
         resolver = Resolver.new(config: @config, detection: detection)
         packages = resolver.resolve
 
+        return puts(JSON.pretty_generate(report(detection, packages))) if @json
+
         print_detection(detection)
         print_packages(packages)
       end
 
       private
+
+      # The documented --json shape.
+      def report(detection, packages)
+        {
+          config: {path: @config.path, source: @config.source},
+          os: detection.os,
+          profile: detection.profile,
+          machine: detection.machine,
+          distros: detection.distros,
+          groups: detection.groups,
+          model: detection.model,
+          packages: packages.map do |repo_path, package|
+            {repo: repo_path, name: package, target: @config.target_for(repo_path, package)}
+          end
+        }
+      end
 
       def print_detection(detection)
         heading "System Detection"

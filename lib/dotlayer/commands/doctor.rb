@@ -1,3 +1,4 @@
+require "json"
 require "shellwords"
 
 module Dotlayer
@@ -9,16 +10,31 @@ module Dotlayer
       SKIP_DIRS = %w[.cache node_modules .git].freeze
       SKIP_PATHS = %w[.local/share/Steam .local/state].freeze
 
-      def initialize(config:, detector: nil, max_depth: nil)
+      def initialize(config:, detector: nil, max_depth: nil, json: false)
         @config = config
         @max_depth = max_depth || DEFAULT_MAX_DEPTH
         @detector = detector || Detector.new(config: @config)
         @issues = []
         @reported_links = []
         @hints = []
+        @checks = []
+        @json = json
       end
 
+      # Returns true when no issues were found. With json: true, prints only
+      # the JSON report (the exit status is the caller's, as before).
       def run
+        return run_text unless @json
+
+        result = nil
+        silence_stdout { result = run_text }
+        puts JSON.pretty_generate(checks: @checks, issues: @issues, hints: @hints, ok: result)
+        result
+      end
+
+      private
+
+      def run_text
         detection = @detector.detect
         resolver = Resolver.new(config: @config, detection: detection)
         @packages = resolver.resolve
@@ -26,12 +42,12 @@ module Dotlayer
         heading "Dotlayer Doctor"
         puts
 
-        check_stow_installed
-        check_repos_exist
-        check_packages_exist(@packages)
-        check_broken_symlinks
-        check_unlinked_files
-        check_dangling_repo_links
+        run_check("stow installed") { check_stow_installed }
+        run_check("repos exist") { check_repos_exist }
+        run_check("packages exist") { check_packages_exist(@packages) }
+        run_check("no broken symlinks") { check_broken_symlinks }
+        run_check("managed files are links") { check_unlinked_files }
+        run_check("no dangling links into repos") { check_dangling_repo_links }
 
         puts
         if @issues.empty?
@@ -44,7 +60,13 @@ module Dotlayer
         @issues.empty?
       end
 
-      private
+      # Records the issues a check added as that check's details.
+      def run_check(name)
+        before = @issues.size
+        yield
+        details = @issues[before..]
+        @checks << {name:, ok: details.empty?, details:}
+      end
 
       def check_stow_installed
         print "  Checking stow... "

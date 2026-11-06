@@ -1,5 +1,16 @@
+require "stringio"
+
 module Dotlayer
   module Output
+    # Runs the block with stdout swallowed, so --json prints only the JSON.
+    def silence_stdout
+      original = $stdout
+      $stdout = StringIO.new
+      yield
+    ensure
+      $stdout = original
+    end
+
     def heading(text)
       puts "\e[1m#{text}\e[0m"
     end

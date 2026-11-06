@@ -14,13 +14,13 @@ module Dotlayer
       warn "Using config: #{config.path || "(none, defaults)"} (#{config.source})" if options[:verbose] && command
 
       case command
-      when "status" then Commands::Status.new(config:).run
+      when "status" then Commands::Status.new(config:, json: options[:json]).run
       when "install" then Commands::Install.new(
         config:, dry_run: options[:dry_run], verbose: options[:verbose], yes: options[:yes], backup: options[:backup]
       ).run
       when "update" then Commands::Update.new(config:, dry_run: options[:dry_run], verbose: options[:verbose]).run
-      when "diff" then exit(1) unless Commands::Diff.new(config:).run
-      when "doctor" then exit(1) unless Commands::Doctor.new(config:, max_depth: options[:depth]).run
+      when "diff" then exit(1) unless Commands::Diff.new(config:, json: options[:json]).run
+      when "doctor" then exit(1) unless Commands::Doctor.new(config:, max_depth: options[:depth], json: options[:json]).run
       when "adopt" then run_adopt(config:, argv:, options:)
       when "machine" then run_machine(config:, argv:, options:)
       when "version"
@@ -34,7 +34,7 @@ module Dotlayer
 
     def parse_global_options(argv)
       options = {dry_run: false, verbose: false, config: nil, private: false, depth: nil, yes: false, backup: false,
-                 match: nil, from: nil, distro: nil, profile: nil}
+                 json: false, match: nil, from: nil, distro: nil, profile: nil}
 
       OptionParser.new do |opts|
         opts.on("-c", "--config PATH", "Config file path") { |v| options[:config] = v }
@@ -42,6 +42,7 @@ module Dotlayer
         opts.on("-v", "--verbose", "Verbose output") { options[:verbose] = true }
         opts.on("-y", "--yes", "Answer yes to install prompts (needed without a terminal)") { options[:yes] = true }
         opts.on("--backup", "install: move or delete files that block stow") { options[:backup] = true }
+        opts.on("--json", "status, diff, doctor: print JSON instead of text") { options[:json] = true }
         opts.on("--match TEXT", "machine add: text the model contains") { |v| options[:match] = v }
         opts.on("--from MACHINE", "machine add: machine whose layer to copy") { |v| options[:from] = v }
         opts.on("--distro NAME", "machine add: distro of the layer") { |v| options[:distro] = v }
@@ -101,6 +102,7 @@ module Dotlayer
           -n, --dry-run       Show what would be done without making changes
           -y, --yes           Answer yes to install prompts (required when stdin is not a terminal)
               --backup        Install: delete identical blocking files, move others to ~/dotfiles-conflicts-<time>/
+              --json          status, diff, doctor: machine-readable output (see README)
               --match TEXT    machine add: text the model contains (default: read from this machine)
               --from MACHINE  machine add: machine whose layer to copy
               --distro NAME   machine add: distro of the layer (needed if several are detected)

@@ -313,9 +313,57 @@ Options:
       --backup        Install: delete identical blocking files, move different ones aside
   -y, --yes           Answer yes to install prompts (required without a terminal)
   -p, --private       Use private repo (for adopt command)
+      --json          status, diff, doctor: print JSON instead of text
       --depth N       Max depth for doctor's dangling-link scan (default: 6)
   -v, --verbose       Verbose output
 ```
+
+### JSON output
+
+`status`, `diff` and `doctor` accept `--json`. Stdout is then exactly one JSON document: no colors, no other text (warnings and `-v` messages go to stderr). Exit statuses do not change: `diff` and `doctor` still exit 1 when something is pending or wrong. Keys are stable; new keys may be added, none are renamed or removed within a major version.
+
+`status --json`:
+
+```json
+{
+  "config": {"path": "/home/me/.config/dotlayer/dotlayer.yml", "source": "discovered"},
+  "os": "linux", "profile": "laptop", "machine": "p14s",
+  "distros": ["omarchy"], "groups": [],
+  "model": {"/sys/class/dmi/id/product_version": "ThinkPad P14s Gen 6 AMD"},
+  "packages": [{"repo": "/home/me/.public_dotfiles", "name": "config", "target": "/home/me"}]
+}
+```
+
+`config.path` is null when no config file was found. `model` maps each source file to its text. `packages` is in stow order.
+
+`diff --json`:
+
+```json
+{
+  "os": "linux", "profile": "laptop", "machine": "p14s",
+  "packages": [
+    {"repo": "/home/me/.public_dotfiles", "name": "config", "target": "/home/me", "target_missing": false,
+     "link": [".config/app/settings"], "unlink": [], "conflicts": []}
+  ],
+  "system_files": [{"dest": "/etc/gai.conf", "reason": "content differs"}],
+  "pending": 2, "notes": [], "ok": false
+}
+```
+
+Every resolved package is listed, with empty arrays when nothing changes. `conflicts` holds stow's conflict lines (or its error). `pending` is the number of `link`, `unlink`, `conflicts` and `system_files` entries, and `ok` is true when it is 0.
+
+`doctor --json`:
+
+```json
+{
+  "checks": [{"name": "managed files are links", "ok": false, "details": ["repo/config: .config/app/settings"]}],
+  "issues": ["repo/config: .config/app/settings"],
+  "hints": ["Compare each file with its repo copy ..."],
+  "ok": false
+}
+```
+
+Checks, in order: `stow installed`, `repos exist`, `packages exist`, `no broken symlinks`, `managed files are links`, `no dangling links into repos`. A check's `details` are the issues it found; `issues` is all of them.
 
 ### install --backup
 
