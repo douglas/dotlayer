@@ -93,6 +93,20 @@ class DiffTest < Minitest::Test
     assert_match(/s\.conf \(unreadable, cannot compare\)/, output)
   end
 
+  def test_notes_when_global_ignore_is_not_linked_yet
+    FileUtils.mkdir_p(File.join(@repo, "stow"))
+    File.write(File.join(@repo, "stow", ".stow-global-ignore"), "\\.git\n")
+    config = stub_config(target: @target, repos: [build_repo(path: @repo)], packages: %w[stow config])
+    original_home = ENV["HOME"]
+    ENV["HOME"] = @target
+
+    output = capture_io { Dotlayer::Commands::Diff.new(config:, detector: stub_detector).run }.first
+
+    assert_match(/Note: .*stow-global-ignore.*not linked yet/, output)
+  ensure
+    ENV["HOME"] = original_home
+  end
+
   def test_cli_exits_1_when_changes_pending
     config_path = File.join(@tmpdir, "dotlayer.yml")
     File.write(config_path, "target: #{@target}\nrepos:\n  - path: #{@repo}\npackages:\n  - config\n")

@@ -115,6 +115,7 @@ module Dotlayer
 
         if conflicts.empty?
           ok "yes"
+          warning "    Note: #{Stow::GLOBAL_IGNORE_NOTE}" if Stow.pending_global_ignore(@packages).any?
           return
         end
 

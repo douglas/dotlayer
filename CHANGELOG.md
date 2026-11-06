@@ -18,6 +18,15 @@ All notable changes to dotlayer. Versions follow [Semantic Versioning](https://s
   files need installing and asks you to rerun with `--yes`, instead of reading
   EOF and printing "Skipped." This is not a failure exit.
 
+### Fixed
+
+- `diff` and `doctor` could report no conflict for a file that `install` then
+  refused to overwrite, such as `.config/nvim/.gitignore`. Stow reads its
+  global ignore list from `$HOME/.stow-global-ignore`, and until `install`
+  links it, a simulation uses stow's built-in list, which ignores `.gitignore`.
+  Both commands now print a note when a package ships that file and it is not
+  linked yet.
+
 ## 0.3.2 — 2026-11-05
 
 ### Added

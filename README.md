@@ -286,7 +286,7 @@ Pass `-y`/`--yes` to answer yes to the prompts. Without a terminal on stdin (cro
 
 ### diff
 
-Shows what `dotlayer install` would change, without changing anything. Packages are resolved exactly like `install`, then stow runs in simulate mode (`stow -n -v`). Output is grouped per package: `LINK` and `UNLINK` operations plus `CONFLICT` entries (stow aborts the whole package on conflicts). Links that already exist are not listed. Linux `system_files` are listed when the destination is missing, its content differs from the source, its mode differs, or it cannot be read (no sudo is used).
+Shows what `dotlayer install` would change, without changing anything. Packages are resolved exactly like `install`, then stow runs in simulate mode (`stow -n -v`). Output is grouped per package: `LINK` and `UNLINK` operations plus `CONFLICT` entries (stow aborts the whole package on conflicts). Links that already exist are not listed. If a package ships `.stow-global-ignore` and it is not linked into `$HOME` yet, `diff` and `doctor` print a note: stow reads that file from `$HOME`, so until `install` links it the simulation uses stow's built-in ignore list and can miss conflicts (such as `.gitignore`) that `install` will hit. Linux `system_files` are listed when the destination is missing, its content differs from the source, its mode differs, or it cannot be read (no sudo is used).
 
 ```sh
 dotlayer diff

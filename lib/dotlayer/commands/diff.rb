@@ -27,6 +27,7 @@ module Dotlayer
         diff_system_files if detection.os == "linux"
 
         puts
+        warning "  Note: #{Stow::GLOBAL_IGNORE_NOTE}" if Stow.pending_global_ignore(packages).any?
         if @pending.zero?
           ok "No changes pending."
         else

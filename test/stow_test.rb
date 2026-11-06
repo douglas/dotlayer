@@ -94,4 +94,38 @@ class StowTest < Minitest::Test
   ensure
     ENV["PATH"] = original_path
   end
+
+  def test_pending_global_ignore_until_the_list_is_linked
+    FileUtils.mkdir_p(File.join(@repo, "stow"))
+    File.write(File.join(@repo, "stow", ".stow-global-ignore"), "\\.git\n")
+    packages = [[@repo, "stow"], [@repo, "pkg"]]
+
+    assert_equal [[@repo, "stow"]], Dotlayer::Stow.pending_global_ignore(packages, home: @target)
+
+    Dotlayer::Stow.new(target: @target).restow(@repo, "stow")
+
+    assert_empty Dotlayer::Stow.pending_global_ignore(packages, home: @target)
+  end
+
+  # Why diff/doctor can miss a conflict that install then hits: Stow reads
+  # $HOME/.stow-global-ignore, which replaces its built-in list (that ignores
+  # .gitignore) once install has linked it.
+  def test_simulation_before_global_ignore_is_linked_misses_gitignore_conflict
+    FileUtils.mkdir_p([File.join(@repo, "stow"), File.join(@target, ".config", "test")])
+    File.write(File.join(@repo, "stow", ".stow-global-ignore"), "\\.git\n")
+    File.write(File.join(@repo, "pkg", ".config", "test", ".gitignore"), "repo")
+    File.write(File.join(@target, ".config", "test", ".gitignore"), "mine")
+    stow = Dotlayer::Stow.new(target: @target, dry_run: true, quiet: true)
+    original_home = ENV["HOME"]
+    ENV["HOME"] = @target
+
+    assert stow.restow(@repo, "pkg"), "built-in list ignores .gitignore"
+
+    Dotlayer::Stow.new(target: @target, quiet: true).restow(@repo, "stow")
+
+    refute stow.restow(@repo, "pkg"), "the repo's list does not ignore .gitignore"
+    assert_match(/\.gitignore/, stow.last_error)
+  ensure
+    ENV["HOME"] = original_home
+  end
 end

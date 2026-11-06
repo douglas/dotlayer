@@ -97,6 +97,25 @@ class DoctorTest < Minitest::Test
     end
   end
 
+  def test_notes_when_global_ignore_is_not_linked_yet
+    Dir.mktmpdir do |tmpdir|
+      target = File.join(tmpdir, "home")
+      repo = File.join(tmpdir, "repo")
+      FileUtils.mkdir_p([File.join(repo, "stow"), File.join(repo, "config", ".config", "app"), target])
+      File.write(File.join(repo, "stow", ".stow-global-ignore"), "\\.git\n")
+      File.write(File.join(repo, "config", ".config", "app", "settings"), "repo\n")
+      config = stub_config(target:, repos: [build_repo(path: repo)], packages: %w[stow config])
+      original_home = ENV["HOME"]
+      ENV["HOME"] = target
+
+      output = run_doctor(config)
+
+      assert_match(/Note: .*stow-global-ignore.*not linked yet/, output)
+    ensure
+      ENV["HOME"] = original_home
+    end
+  end
+
   def test_linked_install_passes_link_check
     Dir.mktmpdir do |tmpdir|
       target = File.join(tmpdir, "home")
