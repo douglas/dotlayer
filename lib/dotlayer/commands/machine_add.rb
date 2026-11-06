@@ -127,7 +127,7 @@ module Dotlayer
       def summarize(match, profile, dest, source)
         puts "machine:  #{@name} (#{profile}), matched by model containing \"#{match}\""
         puts "layer:    #{dest}#{" (copied from #{File.basename(source)}, without monitors)" if source}"
-        puts "rule:     #{rule_lines(match).join(" ").strip}"
+        puts "rule:     #{rule_lines(match).map(&:strip).join(" ")}"
       end
 
       def scaffold(source, dest)
