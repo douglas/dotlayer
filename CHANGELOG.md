@@ -62,6 +62,10 @@ All notable changes to dotlayer. Versions follow [Semantic Versioning](https://s
 
 ### Fixed
 
+- `doctor` no longer hangs on macOS: its dangling-link scan skips the home
+  folders macOS guards with privacy prompts (`Documents`, `Library`,
+  `Pictures` and the like), except where a package ships files. Reading one
+  waited on a prompt that never shows over SSH.
 - `doctor`'s dangling-link scan decides which git checkouts to enter from each
   package's own target, so a package with a per-package `target:` that ships
   into a checkout under it is scanned there.

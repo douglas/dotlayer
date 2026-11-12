@@ -9,6 +9,10 @@ module Dotlayer
       DEFAULT_MAX_DEPTH = 6
       SKIP_DIRS = %w[.cache node_modules .git].freeze
       SKIP_PATHS = %w[.local/share/Steam .local/state].freeze
+      # macOS guards these home folders with privacy prompts, and reading one
+      # waits until someone answers, which never happens over SSH. The scan
+      # enters them only on the way to a directory a package ships.
+      MACOS_PRIVATE_DIRS = %w[Applications Desktop Documents Downloads Library Movies Music OrbStack Pictures Public].freeze
 
       def initialize(config:, detector: nil, max_depth: nil, json: false)
         @config = config
@@ -36,6 +40,7 @@ module Dotlayer
 
       def run_text
         detection = @detector.detect
+        @macos = detection.os == "macos"
         resolver = Resolver.new(config: @config, detection: detection)
         @packages = resolver.resolve
 
@@ -177,6 +182,7 @@ module Dotlayer
       def find_dangling_repo_links(roots)
         repo_roots = @config.repos.map(&:path)
         @shipped_dirs = shipped_dirs(repo_roots)
+        @shipped_paths = @shipped_dirs.flat_map { |dir| ancestors(dir) }.to_set
         found = {}
         roots.each { |root| scan_dir(root, root, 0, repo_roots, found) }
         found.except(*@reported_links)
@@ -206,7 +212,17 @@ module Dotlayer
         SKIP_DIRS.include?(File.basename(path)) ||
           SKIP_PATHS.include?(relative) ||
           repo_roots.include?(path) ||
-          foreign_checkout?(path)
+          foreign_checkout?(path) ||
+          macos_private?(path, relative)
+      end
+
+      def macos_private?(path, relative)
+        @macos && MACOS_PRIVATE_DIRS.include?(relative.split("/").first) && !@shipped_paths.include?(path)
+      end
+
+      # dir and every directory above it.
+      def ancestors(dir)
+        Enumerator.produce(dir) { |d| File.dirname(d) }.take_while { |d| d != File.dirname(d) }
       end
 
       # Another git checkout (~/src/*, ~/work/*) holds stow links only where a

@@ -299,6 +299,27 @@ class DoctorTest < Minitest::Test
 
   private
 
+  def test_dangling_scan_on_macos_enters_private_folders_only_where_packages_ship
+    Dir.mktmpdir do |tmpdir|
+      target = File.join(tmpdir, "home")
+      repo = File.join(tmpdir, "repo")
+      gone = File.join(repo, "config", "gone")
+      agents = File.join(target, "Library", "LaunchAgents")
+      FileUtils.mkdir_p([File.join(repo, "config", "Library", "LaunchAgents"), agents, File.join(target, "Documents")])
+      File.symlink(gone, File.join(agents, "shipped_dangling"))
+      File.symlink(gone, File.join(target, "Documents", "private_dangling"))
+      config = stub_config(target:, repos: [build_repo(path: repo)], packages: %w[config])
+
+      output = capture_io {
+        Dotlayer::Commands::Doctor.new(config:, detector: stub_detector(build_detection(os: "macos"))).run
+      }.first
+
+      assert_match(/shipped_dangling/, output)
+      refute_match(/private_dangling/, output)
+      assert_match(/private_dangling/, run_doctor(config))
+    end
+  end
+
   def run_doctor(config, **options)
     capture_io {
       Dotlayer::Commands::Doctor.new(config:, detector: stub_detector, **options).run
