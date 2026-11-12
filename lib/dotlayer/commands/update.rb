@@ -38,6 +38,7 @@ module Dotlayer
 
         restow_packages
         run_after(changed)
+        report_unpushed
         @ok
       end
 
@@ -112,6 +113,37 @@ module Dotlayer
           error("  after-pull failed: #{repo.after} (in #{repo.path})")
         end
         puts
+      end
+
+      # Work only this machine has: other machines can't pull it until it's
+      # pushed, and their pulls still report "up to date". Unpushed commits
+      # fail the update; uncommitted changes are only reported.
+      def report_unpushed
+        paths = [(@self_root if self_repo?), *@config.repos.map(&:path), *@config.pull_repos.map(&:path)]
+        notes = paths.compact.uniq.filter_map do |path|
+          note = unpushed(path)
+          "#{File.basename(path)}: #{note}" if note
+        end
+        return if notes.empty?
+
+        heading "Not on origin yet"
+        notes.each { |note| warning("  #{note}") }
+        puts
+      end
+
+      def unpushed(path)
+        return unless Dir.exist?(File.join(path, ".git"))
+
+        ahead, status = Open3.capture2("git", "-C", path, "rev-list", "--count", "@{upstream}..HEAD", err: File::NULL)
+        notes = []
+        if !status.success?
+          notes << "no upstream branch"
+        elsif ahead.to_i.positive?
+          @ok = false
+          notes << "#{ahead.to_i} unpushed commit(s)"
+        end
+        notes << "uncommitted changes" unless Open3.capture2("git", "-C", path, "status", "--porcelain").first.empty?
+        notes.join(", ") unless notes.empty?
       end
 
       def reexec(changed)

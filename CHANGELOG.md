@@ -6,6 +6,10 @@ All notable changes to dotlayer. Versions follow [Semantic Versioning](https://s
 
 ### Added
 
+- `update` ends with a "Not on origin yet" list of repos with unpushed
+  commits, no upstream branch, or uncommitted changes. Unpushed commits make
+  it exit 1, since other machines would pull without them and report "up to
+  date".
 - `dotlayer hooks install|uninstall` writes `post-merge` and `post-rewrite` git
   hooks into each configured repo that run `dotlayer install --quiet`, so a
   plain `git pull` re-stows. They never prompt (pending system files only print

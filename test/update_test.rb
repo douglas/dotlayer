@@ -201,6 +201,60 @@ class UpdateTest < Minitest::Test
     refute File.exist?(marker)
   end
 
+  def test_reports_unpushed_commits_and_uncommitted_changes
+    ahead = clone_behind("pkgrepo", new_commit: false)
+    system("git", "-C", ahead, "-c", "user.name=t", "-c", "user.email=t@t",
+      "commit", "-q", "--allow-empty", "-m", "local", out: File::NULL, err: File::NULL)
+    dirty = clone_behind("biblo", new_commit: false)
+    File.write(File.join(dirty, "one"), "edited")
+    clean = clone_behind("notes", new_commit: false)
+    config = stub_config(
+      target: @target, repos: [], packages: %w[config],
+      pull_repos: [ahead, dirty, clean].map { |path| Dotlayer::PullRepo.new(path:, after: nil) }
+    )
+
+    result = nil
+    output = capture_io {
+      result = Dotlayer::Commands::Update.new(config:, detector: stub_detector, dry_run: true, self_root: nil, env: {}).run
+    }.first
+
+    refute result, "unpushed commits fail the update"
+    assert_match(/Not on origin yet/, output)
+    assert_match(/pkgrepo: 1 unpushed commit\(s\)/, output)
+    assert_match(/biblo: uncommitted changes/, output)
+    refute_match(/notes:/, output)
+  end
+
+  def test_uncommitted_changes_alone_do_not_fail_the_update
+    dirty = clone_behind("biblo", new_commit: false)
+    File.write(File.join(dirty, "one"), "edited")
+    config = stub_config(
+      target: @target, repos: [], packages: %w[config],
+      pull_repos: [Dotlayer::PullRepo.new(path: dirty, after: nil)]
+    )
+
+    result = nil
+    capture_io {
+      result = Dotlayer::Commands::Update.new(config:, detector: stub_detector, dry_run: true, self_root: nil, env: {}).run
+    }
+
+    assert result
+  end
+
+  def test_no_unpushed_report_when_everything_is_on_origin
+    clean = clone_behind("notes", new_commit: false)
+    config = stub_config(
+      target: @target, repos: [], packages: %w[config],
+      pull_repos: [Dotlayer::PullRepo.new(path: clean, after: nil)]
+    )
+
+    output = capture_io {
+      Dotlayer::Commands::Update.new(config:, detector: stub_detector, dry_run: true, self_root: nil, env: {}).run
+    }.first
+
+    refute_match(/Not on origin yet/, output)
+  end
+
   private
 
   # A clone of a new bare remote. With new_commit, the remote then gets a
