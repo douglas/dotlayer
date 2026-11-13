@@ -42,13 +42,13 @@ module Dotlayer
 
       def print_detection(detection)
         heading "System Detection"
-        puts "  Config:     #{config_label}"
-        puts "  OS:         #{detection.os}"
-        puts "  Profile:    #{detection.profile}"
-        puts "  Machine:    #{detection.machine}"
+        puts "  #{muted("Config:")}    #{config_label}"
+        puts "  #{muted("OS:")}        #{detection.os}"
+        puts "  #{muted("Profile:")}   #{detection.profile}"
+        puts "  #{muted("Machine:")}   #{detection.machine}"
         print_model(detection.model)
-        puts "  Distros:    #{detection.distros.empty? ? "(none)" : detection.distros.join(", ")}"
-        puts "  Groups:     #{detection.groups.empty? ? "(none)" : detection.groups.join(", ")}"
+        puts "  #{muted("Distros:")}   #{detection.distros.empty? ? "(none)" : detection.distros.join(", ")}"
+        puts "  #{muted("Groups:")}    #{detection.groups.empty? ? "(none)" : detection.groups.join(", ")}"
         puts
       end
 
@@ -61,9 +61,9 @@ module Dotlayer
       # Every source a `model:` rule can match, so users can write rules.
       def print_model(model)
         if model.empty?
-          puts "  Model:      (none read)"
+          puts "  #{muted("Model:")}     (none read)"
         else
-          model.each { |source, text| puts "  Model:      #{text}  (#{source})" }
+          model.each { |source, text| puts "  #{muted("Model:")}     #{text}  (#{source})" }
         end
       end
 
