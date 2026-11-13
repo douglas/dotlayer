@@ -11,40 +11,61 @@ module Dotlayer
       $stdout = original
     end
 
+    # Color and marks only on a terminal; piped output (scripts, CI) and
+    # NO_COLOR stay plain. Only the 16-color palette, so the terminal theme
+    # decides the actual colors.
+    def color?
+      $stdout.tty? && ENV.fetch("NO_COLOR", "").empty? && ENV["TERM"] != "dumb"
+    end
+
+    def paint(code, text)
+      color? ? "\e[#{code}m#{text}\e[0m" : text.to_s
+    end
+
+    # Puts the mark after any leading indent, and only on a terminal.
+    def mark_line(code, mark, text)
+      indent, rest = text.to_s.match(/\A(\s*)(.*)\z/m).captures
+      puts color? ? "#{indent}#{paint(code, "#{mark} #{rest}")}" : text
+    end
+
     def heading(text)
-      puts "\e[1m#{text}\e[0m"
+      puts paint("1;34", text)
     end
 
     def ok(text = "ok")
-      puts "\e[32m#{text}\e[0m"
+      mark_line(32, "✓", text)
     end
 
     def error(text)
-      puts "\e[31m#{text}\e[0m"
+      mark_line(31, "✗", text)
     end
 
     def warning(text)
-      puts "\e[33m#{text}\e[0m"
+      mark_line(33, "●", text)
     end
 
     def info(text)
-      puts "\e[36m#{text}\e[0m"
+      puts paint(90, text)
     end
 
     def green(text)
-      "\e[32m#{text}\e[0m"
+      paint(32, text)
     end
 
     def red(text)
-      "\e[31m#{text}\e[0m"
+      paint(31, text)
     end
 
     def yellow(text)
-      "\e[33m#{text}\e[0m"
+      paint(33, text)
     end
 
     def bold(text)
-      "\e[1m#{text}\e[0m"
+      paint(1, text)
+    end
+
+    def muted(text)
+      paint(90, text)
     end
 
     def restow_package(stow, repo_path, package, verb: "Stowing", target: nil)
