@@ -447,6 +447,34 @@ class InstallTest < Minitest::Test
     refute_match(/hooks/, output)
   end
 
+  def test_unstows_layers_that_no_longer_match_before_stowing
+    laptop = File.join(@repo, "config-laptop", ".config", "test")
+    desktop = File.join(@repo, "config-desktop", ".config", "test")
+    FileUtils.mkdir_p([laptop, desktop])
+    File.write(File.join(laptop, "machine"), "laptop")
+    File.write(File.join(desktop, "machine"), "desktop")
+    config = stub_config(target: @target, repos: [build_repo(path: @repo)], packages: %w[config])
+    capture_io { Dotlayer::Commands::Install.new(config:, detector: stub_detector(build_detection(machine: "laptop"))).run }
+
+    output = capture_io {
+      Dotlayer::Commands::Install.new(config:, detector: stub_detector(build_detection(machine: "desktop"))).run
+    }.first
+
+    assert_match(/Unstowing config-laptop \(no longer matches this machine\)\.\.\. 1 link\(s\) removed/, output)
+    link = File.join(@target, ".config", "test", "machine")
+    assert_equal "desktop", File.read(link)
+  end
+
+  def test_does_not_mention_stale_layers_without_links
+    FileUtils.mkdir_p(File.join(@repo, "config-macos", ".config", "test"))
+    File.write(File.join(@repo, "config-macos", ".config", "test", "mac"), "mac")
+    config = stub_config(target: @target, repos: [build_repo(path: @repo)], packages: %w[config])
+
+    output = capture_io { Dotlayer::Commands::Install.new(config:, detector: stub_detector).run }.first
+
+    refute_match(/Unstowing/, output)
+  end
+
   private
 
   # Writes each name's source in the repo; "same" bodies are also written to

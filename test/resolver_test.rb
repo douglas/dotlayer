@@ -280,6 +280,24 @@ class ResolverTest < Minitest::Test
     assert_empty packages
   end
 
+  def test_stale_lists_layer_variants_this_machine_does_not_match
+    create_dirs("config", "config-linux", "config-macos", "config-omarchy-laptop",
+      "config-omarchy-laptop-t1g", "config-omarchy-desktop", "config-omarchy-desktop-neo", "bin")
+    config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])
+    detection = build_detection(profile: "desktop", machine: "neo", distros: ["omarchy"])
+
+    stale = Dotlayer::Resolver.new(config:, detection:).stale.map(&:last)
+
+    assert_equal %w[config-macos config-omarchy-laptop config-omarchy-laptop-t1g], stale
+  end
+
+  def test_stale_skips_repos_without_layers
+    create_dirs("alpha", "beta")
+    config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])
+
+    assert_empty Dotlayer::Resolver.new(config:, detection: build_detection).stale
+  end
+
   private
 
   def resolve(config, detection)

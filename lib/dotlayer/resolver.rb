@@ -18,6 +18,26 @@ module Dotlayer
       packages
     end
 
+    # Layer variants (dirs named <base package>-...) that this machine doesn't
+    # match, as [repo_path, dir] pairs. Their links are left over from a time it
+    # did, such as a laptop disk moved into a desktop; install unstows them.
+    def stale
+      @config.repos.flat_map do |repo|
+        next [] unless Dir.exist?(repo.path)
+
+        base_packages = repo.packages || @config.packages
+        next [] unless repo.packages || base_packages.any? { |pkg| Dir.exist?(File.join(repo.path, pkg)) }
+
+        dirs = top_level_dirs(repo.path)
+        _layers, matched_dirs = resolve_layers(repo, base_packages, dirs)
+        resolved = resolve_standalone(repo, base_packages, matched_dirs, dirs).map(&:last)
+        dirs
+          .select { |d| layer_variant?(d, base_packages) && !matched_dirs.include?(d) && !resolved.include?(d) }
+          .sort
+          .map { |d| [repo.path, d] }
+      end
+    end
+
     private
 
     def resolve_repo(repo, base_packages)

@@ -6,6 +6,10 @@ All notable changes to dotlayer. Versions follow [Semantic Versioning](https://s
 
 ### Added
 
+- `install` first unstows layer variants this machine no longer matches (a
+  `config-omarchy-laptop-t1g` left behind when a laptop's disk moves into a
+  desktop), so they don't block the layers that replace them. Only the ones
+  that still have links are mentioned.
 - `update` ends with a "Not on origin yet" list of repos with unpushed
   commits, no upstream branch, or uncommitted changes. Unpushed commits make
   it exit 1, since other machines would pull without them and report "up to

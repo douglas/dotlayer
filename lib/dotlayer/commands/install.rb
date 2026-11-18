@@ -43,6 +43,8 @@ module Dotlayer
         heading "Installing dotfiles (#{detection.os}/#{detection.profile}/#{detection.machine})"
         puts
 
+        unstow_stale(stow, resolver.stale)
+
         conflicts = ConflictBackup.new(config: @config, dry_run: @dry_run) if @backup
         failures = packages.count do |repo_path, package|
           !install_package(stow, conflicts, repo_path, package)
@@ -59,6 +61,21 @@ module Dotlayer
       end
 
       private
+
+      # Layers this machine no longer matches keep their links until they are
+      # unstowed, and then block the layers that replace them. Only the ones
+      # that still have links are mentioned.
+      def unstow_stale(stow, stale)
+        stale.each do |repo_path, package|
+          removed = stow.unstow(repo_path, package, target: @config.target_for(repo_path, package))
+          if removed.nil?
+            warning "Could not unstow #{package}, which no longer matches: #{stow.last_error}"
+          elsif removed.positive?
+            note = @dry_run ? "dry-run, #{removed} link(s)" : "#{removed} link(s) removed"
+            puts "  Unstowing #{package} (no longer matches this machine)... #{note}"
+          end
+        end
+      end
 
       def install_package(stow, conflicts, repo_path, package)
         target = @config.target_for(repo_path, package)

@@ -55,6 +55,24 @@ module Dotlayer
       false
     end
 
+    # Removes a package's links from target. Returns the number of links it
+    # removed (or would remove, in dry-run), or nil when stow failed.
+    def unstow(repo_path, package, target: nil)
+      target = target ? File.expand_path(target) : @target
+      return 0 unless Dir.exist?(target)
+
+      args = ["stow", "-D", "--no-folding", "-v"]
+      args << "-n" if @dry_run
+      args << "-d" << repo_path << "-t" << target << package
+      output, status = Open3.capture2e(*args)
+      @last_output = output
+      @last_error = status.success? ? nil : output.strip
+      status.success? ? output.lines.count { |l| l.start_with?("UNLINK:") } : nil
+    rescue Errno::ENOENT
+      @last_error = "GNU Stow is not installed. Install it with your package manager."
+      nil
+    end
+
     private
 
     # Stow needs the target dir to exist. A per-package target such as
