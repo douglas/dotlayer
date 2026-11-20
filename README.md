@@ -328,6 +328,7 @@ Options:
   -p, --private       Use private repo (for adopt command)
   -q, --quiet         install: print only failures and what needs --yes
       --json          status, diff, doctor: print JSON instead of text
+      --fix           doctor: remove dangling links into the repos, then recheck
       --depth N       Max depth for doctor's dangling-link scan (default: 6)
   -v, --verbose       Verbose output
 ```
@@ -372,10 +373,21 @@ Every resolved package is listed, with empty arrays when nothing changes. `confl
 {
   "checks": [{"name": "managed files are links", "ok": false, "details": ["repo/config: .config/app/settings"]}],
   "issues": ["repo/config: .config/app/settings"],
+  "issue_count": 1,
   "hints": ["Compare each file with its repo copy ..."],
+  "removed": [],
   "ok": false
 }
 ```
+
+Keys, all always present:
+
+- `checks`: array of `{"name": string, "ok": boolean, "details": [string]}`, one per check (pass/fail in `ok`, the check's issues in `details`).
+- `issues`: array of strings, every issue from every check.
+- `issue_count`: integer, the length of `issues`.
+- `hints`: array of strings, suggested next steps.
+- `removed`: array of link paths that `--fix` removed (or would remove with `--dry-run`); `[]` without `--fix`.
+- `ok`: boolean, true when `issues` is empty. The exit status is `0` when true, `1` otherwise.
 
 Checks, in order: `stow installed`, `repos exist`, `packages exist`, `no broken symlinks`, `managed files are links`, `no dangling links into repos`. A check's `details` are the issues it found; `issues` is all of them.
 
@@ -406,7 +418,11 @@ Exit status: `0` when nothing would change, `1` when changes are pending (so it 
 
 ### doctor
 
-Checks that stow is installed, repos and packages exist, that managed config paths have no broken symlinks, and that every managed file is still a link: an app that saves by replacing the file leaves a plain file there, which `install` would refuse to overwrite. It also scans the whole target dir (default `~`) for symlinks that point into a configured repo but whose target no longer exists. The scan skips `.cache`, `node_modules`, `.git`, `.local/share/Steam` and the repos themselves. It also skips other git checkouts (any directory with a `.git`, like `~/src/*`), unless a package ships files into that path, since stow only links there in that case. On macOS it skips the folders the system guards with privacy prompts (`Desktop`, `Documents`, `Downloads`, `Library`, `Movies`, `Music`, `Pictures` and the like) except on the way to a directory a package ships, such as `~/Library/LaunchAgents`: reading them waits on a prompt, which over SSH never comes. It never follows directory symlinks, and stops at `--depth` levels (default 6). It only reports: each dangling link is listed with its target, followed by a suggested `rm` command.
+Checks that stow is installed, repos and packages exist, that managed config paths have no broken symlinks, and that every managed file is still a link: an app that saves by replacing the file leaves a plain file there, which `install` would refuse to overwrite. It also scans the whole target dir (default `~`) for symlinks that point into a configured repo but whose target no longer exists. The scan skips `.cache`, `node_modules`, `.git`, `.local/share/Steam` and the repos themselves. It also skips other git checkouts (any directory with a `.git`, like `~/src/*`), unless a package ships files into that path, since stow only links there in that case. On macOS it skips the folders the system guards with privacy prompts (`Desktop`, `Documents`, `Downloads`, `Library`, `Movies`, `Music`, `Pictures` and the like) except on the way to a directory a package ships, such as `~/Library/LaunchAgents`: reading them waits on a prompt, which over SSH never comes. It never follows directory symlinks, and stops at `--depth` levels (default 6). Without `--fix` it only reports: each dangling link is listed with its target, followed by a suggested `rm` command.
+
+`dotlayer doctor --fix` removes those dangling links first, then runs the checks, so the report shows what is left. It removes only symlinks that resolve into a configured repo and whose target does not exist, never real files, links that point elsewhere, or links whose target exists. Parent directories left empty are removed too, but never a top-level directory of the target (`~/.config/xremap` goes, `~/.config` stays). With `--dry-run` it prints `would remove ...` and changes nothing.
+
+`dotlayer update` does the same pruning right after re-stowing, because `stow -R` leaves a link behind when its file is deleted from a repo. Each removed link is printed; with `--dry-run` it prints `would remove` instead.
 
 Exit status: `0` when no issues are found, `1` otherwise.
 

@@ -6,17 +6,12 @@ module Dotlayer
     class Doctor
       include Output
 
-      DEFAULT_MAX_DEPTH = 6
-      SKIP_DIRS = %w[.cache node_modules .git].freeze
-      SKIP_PATHS = %w[.local/share/Steam .local/state].freeze
-      # macOS guards these home folders with privacy prompts, and reading one
-      # waits until someone answers, which never happens over SSH. The scan
-      # enters them only on the way to a directory a package ships.
-      MACOS_PRIVATE_DIRS = %w[Applications Desktop Documents Downloads Library Movies Music OrbStack Pictures Public].freeze
-
-      def initialize(config:, detector: nil, max_depth: nil, json: false)
+      def initialize(config:, detector: nil, max_depth: nil, json: false, fix: false, dry_run: false)
         @config = config
-        @max_depth = max_depth || DEFAULT_MAX_DEPTH
+        @max_depth = max_depth
+        @fix = fix
+        @dry_run = dry_run
+        @removed = []
         @detector = detector || Detector.new(config: @config)
         @issues = []
         @reported_links = []
@@ -32,7 +27,9 @@ module Dotlayer
 
         result = nil
         silence_stdout { result = run_text }
-        puts JSON.pretty_generate(checks: @checks, issues: @issues, hints: @hints, ok: result)
+        puts JSON.pretty_generate(
+          checks: @checks, issues: @issues, issue_count: @issues.size, hints: @hints, removed: @removed, ok: result
+        )
         result
       end
 
@@ -46,6 +43,7 @@ module Dotlayer
 
         heading "Dotlayer Doctor"
         puts
+        prune_dangling_links if @fix
 
         run_check("stow installed") { check_stow_installed }
         run_check("repos exist") { check_repos_exist }
@@ -63,6 +61,19 @@ module Dotlayer
           @hints.each { |hint| puts "  #{hint}" }
         end
         @issues.empty?
+      end
+
+      # --fix: remove the dangling links first, so the checks below report
+      # what is left.
+      def prune_dangling_links
+        heading "Removing dangling links"
+        @removed = dangling_links.prune(dry_run: @dry_run)
+        puts "  none" if @removed.empty?
+        puts
+      end
+
+      def dangling_links
+        DanglingLinks.new(config: @config, packages: @packages, macos: @macos, max_depth: @max_depth)
       end
 
       # Records the issues a check added as that check's details.
@@ -158,8 +169,8 @@ module Dotlayer
       # repo whose destination no longer exists. Never follows directory
       # symlinks and never deletes anything.
       def check_dangling_repo_links
-        print "  Checking for dangling links into repos (depth #{@max_depth})... "
-        dangling = find_dangling_repo_links(scan_roots)
+        print "  Checking for dangling links into repos (depth #{@max_depth || DanglingLinks::DEFAULT_MAX_DEPTH})... "
+        dangling = dangling_links.find.except(*@reported_links)
         if dangling.empty?
           ok "none"
           return
@@ -169,83 +180,7 @@ module Dotlayer
         dangling.each do |link, target|
           @issues << "Dangling link into repo: #{link} -> #{target}"
         end
-        @hints << "To remove dangling links: rm #{dangling.keys.map { |link| Shellwords.escape(link) }.join(" ")}"
-      end
-
-      # The global target plus every per-package target, minus targets that
-      # sit inside another root (the scan already reaches them).
-      def scan_roots
-        roots = ([@config.target] + @packages.map { |repo_path, package| @config.target_for(repo_path, package) }).uniq
-        roots.reject { |root| roots.any? { |other| other != root && root.start_with?("#{other}/") } }
-      end
-
-      def find_dangling_repo_links(roots)
-        repo_roots = @config.repos.map(&:path)
-        @shipped_dirs = shipped_dirs(repo_roots)
-        @shipped_paths = @shipped_dirs.flat_map { |dir| ancestors(dir) }.to_set
-        found = {}
-        roots.each { |root| scan_dir(root, root, 0, repo_roots, found) }
-        found.except(*@reported_links)
-      end
-
-      def scan_dir(dir, root, depth, repo_roots, found)
-        Dir.children(dir).sort.each do |name|
-          path = File.join(dir, name)
-          if File.symlink?(path)
-            target = File.readlink(path)
-            absolute = File.expand_path(target, dir)
-            found[path] = target if into_repo?(absolute, repo_roots) && !File.exist?(path)
-          elsif File.directory?(path) && depth < @max_depth && !skip_dir?(path, root, repo_roots)
-            scan_dir(path, root, depth + 1, repo_roots, found)
-          end
-        end
-      rescue SystemCallError
-        nil
-      end
-
-      def into_repo?(path, repo_roots)
-        repo_roots.any? { |repo| path.start_with?("#{repo}/") }
-      end
-
-      def skip_dir?(path, root, repo_roots)
-        relative = path.delete_prefix("#{root}/")
-        SKIP_DIRS.include?(File.basename(path)) ||
-          SKIP_PATHS.include?(relative) ||
-          repo_roots.include?(path) ||
-          foreign_checkout?(path) ||
-          macos_private?(path, relative)
-      end
-
-      def macos_private?(path, relative)
-        @macos && MACOS_PRIVATE_DIRS.include?(relative.split("/").first) && !@shipped_paths.include?(path)
-      end
-
-      # dir and every directory above it.
-      def ancestors(dir)
-        Enumerator.produce(dir) { |d| File.dirname(d) }.take_while { |d| d != File.dirname(d) }
-      end
-
-      # Another git checkout (~/src/*, ~/work/*) holds stow links only where a
-      # package ships files into it, so skip it otherwise. Checkouts are most
-      # of the files under a home dir, and the scan is far faster without them.
-      def foreign_checkout?(path)
-        File.exist?(File.join(path, ".git")) && !@shipped_dirs.include?(path)
-      end
-
-      # Every directory any package in the repos ships, as an absolute path
-      # under that package's own target. Covers packages that don't apply to
-      # this machine, since their old links can still dangle here.
-      def shipped_dirs(repo_roots)
-        repo_roots.flat_map { |repo|
-          Dir.glob("*/", base: repo).flat_map do |package|
-            package = package.chomp("/")
-            target = @config.target_for(repo, package)
-            Dir.glob("**/", File::FNM_DOTMATCH, base: File.join(repo, package))
-              .map { |dir| dir.chomp("/") }
-              .reject { |dir| dir == "." }
-              .map { |dir| File.join(target, dir) }
-          end
-        }.to_set
+        @hints << "To remove dangling links: dotlayer doctor --fix, or rm #{dangling.keys.map { |link| Shellwords.escape(link) }.join(" ")}"
       end
 
       def find_broken_symlinks

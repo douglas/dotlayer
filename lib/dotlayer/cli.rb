@@ -20,7 +20,9 @@ module Dotlayer
       ).run
       when "update" then exit(1) unless Commands::Update.new(config:, dry_run: options[:dry_run], verbose: options[:verbose]).run
       when "diff" then exit(1) unless Commands::Diff.new(config:, json: options[:json]).run
-      when "doctor" then exit(1) unless Commands::Doctor.new(config:, max_depth: options[:depth], json: options[:json]).run
+      when "doctor" then exit(1) unless Commands::Doctor.new(
+        config:, max_depth: options[:depth], json: options[:json], fix: options[:fix], dry_run: options[:dry_run]
+      ).run
       when "adopt" then run_adopt(config:, argv:, options:)
       when "hooks" then run_hooks(config:, argv:, options:)
       when "machine" then run_machine(config:, argv:, options:)
@@ -35,7 +37,7 @@ module Dotlayer
 
     def parse_global_options(argv)
       options = {dry_run: false, verbose: false, config: nil, private: false, depth: nil, yes: false, backup: false,
-                 quiet: false, json: false, match: nil, from: nil, distro: nil, profile: nil}
+                 quiet: false, json: false, fix: false, match: nil, from: nil, distro: nil, profile: nil}
 
       OptionParser.new do |opts|
         opts.on("-c", "--config PATH", "Config file path") { |v| options[:config] = v }
@@ -45,6 +47,7 @@ module Dotlayer
         opts.on("--backup", "install: move or delete files that block stow") { options[:backup] = true }
         opts.on("-q", "--quiet", "install: print only failures and what needs --yes") { options[:quiet] = true }
         opts.on("--json", "status, diff, doctor: print JSON instead of text") { options[:json] = true }
+        opts.on("--fix", "doctor: remove dangling links into the repos, then recheck") { options[:fix] = true }
         opts.on("--match TEXT", "machine add: text the model contains") { |v| options[:match] = v }
         opts.on("--from MACHINE", "machine add: machine whose layer to copy") { |v| options[:from] = v }
         opts.on("--distro NAME", "machine add: distro of the layer") { |v| options[:distro] = v }
@@ -114,6 +117,7 @@ module Dotlayer
               --backup        Install: delete identical blocking files, move others to ~/dotfiles-conflicts-<time>/
           -q, --quiet         install: print only failures and what needs --yes
               --json          status, diff, doctor: machine-readable output (see README)
+              --fix           doctor: remove dangling links into the repos, then recheck
               --match TEXT    machine add: text the model contains (default: read from this machine)
               --from MACHINE  machine add: machine whose layer to copy
               --distro NAME   machine add: distro of the layer (needed if several are detected)

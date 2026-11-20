@@ -80,6 +80,43 @@ class DoctorTest < Minitest::Test
     end
   end
 
+  def test_fix_removes_dangling_links_and_rechecks
+    with_scan_fixture do |target, _repo, config|
+      dangling = File.join(target, "projects", "a", "dangling")
+
+      output = run_doctor(config, fix: true)
+
+      refute File.symlink?(dangling)
+      assert_match(/removed #{dangling}/, output)
+      assert_match(/No issues found/, output)
+    end
+  end
+
+  def test_fix_with_dry_run_removes_nothing
+    with_scan_fixture do |target, _repo, config|
+      dangling = File.join(target, "projects", "a", "dangling")
+
+      output = run_doctor(config, fix: true, dry_run: true)
+
+      assert File.symlink?(dangling)
+      assert_match(/would remove #{dangling}/, output)
+      assert_match(/1 issue/, output)
+    end
+  end
+
+  def test_json_lists_removed_links_after_fix
+    with_scan_fixture do |target, _repo, config|
+      out = capture_io {
+        Dotlayer::Commands::Doctor.new(config:, detector: stub_detector, fix: true, json: true).run
+      }.first
+      json = JSON.parse(out)
+
+      assert_equal [File.join(target, "projects", "a", "dangling")], json["removed"]
+      assert_equal 0, json["issue_count"]
+      assert json["ok"]
+    end
+  end
+
   def test_reports_managed_file_replaced_by_plain_file
     Dir.mktmpdir do |tmpdir|
       target = File.join(tmpdir, "home")

@@ -37,6 +37,7 @@ module Dotlayer
         end
 
         restow_packages
+        prune_dangling_links
         run_after(changed)
         report_unpushed
         @ok
@@ -157,7 +158,7 @@ module Dotlayer
       def restow_packages
         detection = @detector.detect
         resolver = Resolver.new(config: @config, detection: detection)
-        packages = resolver.resolve
+        packages = @packages = resolver.resolve
         stow = Stow.new(target: @config.target, dry_run: @dry_run, verbose: @verbose)
 
         heading "Re-stowing packages"
@@ -170,6 +171,15 @@ module Dotlayer
 
         puts
         puts "Done! #{packages.size} package(s) restowed."
+      end
+
+      # `stow -R` leaves links behind for files deleted from a repo.
+      def prune_dangling_links
+        heading "Removing dangling links"
+        macos = @detector.detect.os == "macos"
+        removed = DanglingLinks.new(config: @config, packages: @packages, macos:).prune(dry_run: @dry_run)
+        puts "  none" if removed.empty?
+        puts
       end
 
       def abort_failed_packages(failures)

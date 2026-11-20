@@ -73,6 +73,36 @@ class UpdateTest < Minitest::Test
       "stow should create file symlinks after update"
   end
 
+  def test_prunes_dangling_links_after_restow
+    link = File.join(@target, ".config", "xremap", "config.yml")
+    FileUtils.mkdir_p(File.dirname(link))
+    File.symlink(File.join(@repo, "config", ".config", "xremap", "config.yml"), link)
+    config = stub_config(target: @target, repos: [build_repo(path: @repo)], packages: %w[config])
+
+    output = capture_io {
+      Dotlayer::Commands::Update.new(config:, detector: stub_detector, self_root: nil).run
+    }.first
+
+    refute File.symlink?(link)
+    refute File.exist?(File.dirname(link))
+    assert_match(/removed #{link}/, output)
+    assert File.symlink?(File.join(@target, ".config", "test", "config.yml"))
+  end
+
+  def test_dry_run_keeps_dangling_links
+    link = File.join(@target, ".config", "gone")
+    FileUtils.mkdir_p(File.dirname(link))
+    File.symlink(File.join(@repo, "config", ".config", "gone"), link)
+    config = stub_config(target: @target, repos: [build_repo(path: @repo)], packages: %w[config])
+
+    output = capture_io {
+      Dotlayer::Commands::Update.new(config:, detector: stub_detector, dry_run: true, self_root: nil).run
+    }.first
+
+    assert File.symlink?(link)
+    assert_match(/would remove #{link}/, output)
+  end
+
   def test_restow_failure_aborts
     File.write(File.join(@target, ".config"), "conflict")
     config = stub_config(

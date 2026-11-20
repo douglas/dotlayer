@@ -4,6 +4,7 @@ module Dotlayer
   autoload :CLI, "dotlayer/cli"
   autoload :Config, "dotlayer/config"
   autoload :ConflictBackup, "dotlayer/conflict_backup"
+  autoload :DanglingLinks, "dotlayer/dangling_links"
   autoload :Detection, "dotlayer/detector"
   autoload :Detector, "dotlayer/detector"
   autoload :Model, "dotlayer/model"

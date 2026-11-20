@@ -6,6 +6,11 @@ All notable changes to dotlayer. Versions follow [Semantic Versioning](https://s
 
 ### Added
 
+- `update` removes dangling links into the repos after re-stowing (`stow -R`
+  leaves them when a file is deleted from a repo), plus parent directories
+  that become empty (never a top-level dir of the target). `--dry-run` prints
+  "would remove". `doctor --fix` does the same, then rechecks.
+- `doctor --json` adds `issue_count` and `removed`.
 - `install` first unstows layer variants this machine no longer matches (a
   `config-omarchy-laptop-t1g` left behind when a laptop's disk moves into a
   desktop), so they don't block the layers that replace them. Only the ones
