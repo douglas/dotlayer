@@ -15,6 +15,7 @@ module Dotlayer
       SELF_ROOT = File.expand_path("../../..", __dir__)
       # Set on the re-run: the pull: repos the first run changed, one per line.
       PULLED_ENV = "DOTLAYER_PULLED".freeze
+      FAILED_ENV = "DOTLAYER_PULL_FAILED".freeze
 
       def initialize(config:, detector: nil, dry_run: false, verbose: false, self_root: SELF_ROOT, env: ENV, reexec: nil)
         @config = config
@@ -30,13 +31,15 @@ module Dotlayer
       def run
         if @env.key?(PULLED_ENV)
           changed = @env.delete(PULLED_ENV).split("\n")
-          @ok = true
+          @ok = @env.delete(FAILED_ENV) != "1"
         else
           changed = pull_repos
           return @reexec.call(changed) if @needs_reexec && !@dry_run
         end
 
         restow_packages
+        run_after_stow_hooks
+        report_pending_system_files
         prune_dangling_links
         run_after(changed)
         report_unpushed
@@ -152,16 +155,28 @@ module Dotlayer
         args.push("-c", @config.path) if @config.path
         args << "-v" if @verbose
         puts "dotlayer or the dotfiles changed: continuing with the new version"
-        exec({PULLED_ENV => changed.join("\n")}, *args)
+        env = {PULLED_ENV => changed.join("\n")}
+        env[FAILED_ENV] = "1" unless @ok
+        exec(env, *args)
       end
 
       def restow_packages
-        detection = @detector.detect
-        resolver = Resolver.new(config: @config, detection: detection)
+        @detection = @detector.detect
+        resolver = Resolver.new(config: @config, detection: @detection)
         packages = @packages = resolver.resolve
         stow = Stow.new(target: @config.target, dry_run: @dry_run, verbose: @verbose)
 
         heading "Re-stowing packages"
+
+        resolver.stale.each do |repo_path, package|
+          removed = stow.unstow(repo_path, package, target: @config.target_for(repo_path, package))
+          if removed.nil?
+            warning "  Could not unstow #{package}, which no longer matches: #{stow.last_error}"
+          elsif removed.positive?
+            note = @dry_run ? "dry-run, #{removed} link(s)" : "#{removed} link(s) removed"
+            puts "  Unstowing #{package} (no longer matches this machine)... #{note}"
+          end
+        end
 
         failures = packages.count do |repo_path, package|
           !restow_package(stow, repo_path, package, verb: "Restowing", target: @config.target_for(repo_path, package))
@@ -173,10 +188,45 @@ module Dotlayer
         puts "Done! #{packages.size} package(s) restowed."
       end
 
+      def run_after_stow_hooks
+        commands = Array(@config.hooks["after_stow"])
+        return if commands.empty?
+
+        heading "Running after_stow hooks"
+        commands.each do |cmd|
+          print "  #{cmd}... "
+          if @dry_run
+            warning("dry-run")
+          elsif system(cmd)
+            ok
+          else
+            @ok = false
+            error("failed")
+          end
+        end
+        puts
+      end
+
+      def report_pending_system_files
+        return unless @detection&.os == "linux"
+        return if @config.system_files.empty?
+
+        first_repo = @config.repos.first
+        return unless first_repo
+
+        pending = SystemFiles.pending(@config.system_files, first_repo)
+        return if pending.empty?
+
+        heading "System files"
+        pending.each { |change| warning("  #{change.dest} (#{change.reason})") }
+        warning("  Run `dotlayer install --yes` to install pending system files.")
+        puts
+      end
+
       # `stow -R` leaves links behind for files deleted from a repo.
       def prune_dangling_links
         heading "Removing dangling links"
-        macos = @detector.detect.os == "macos"
+        macos = (@detection || @detector.detect).os == "macos"
         removed = DanglingLinks.new(config: @config, packages: @packages, macos:).prune(dry_run: @dry_run)
         puts "  none" if removed.empty?
         puts

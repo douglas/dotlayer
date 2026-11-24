@@ -51,6 +51,14 @@ module Dotlayer
       end
 
       def adopt_path(source, repo_path)
+        if File.symlink?(source)
+          target_path = File.expand_path(File.readlink(source), File.dirname(source))
+          if target_path.start_with?("#{repo_path}/")
+            warning "  Skipping #{source}: already linked into #{File.basename(repo_path)}"
+            return
+          end
+        end
+
         unless File.exist?(source)
           error "  Skipping #{source}: does not exist"
           return

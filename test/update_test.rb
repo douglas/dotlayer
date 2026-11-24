@@ -271,6 +271,22 @@ class UpdateTest < Minitest::Test
     assert result
   end
 
+  def test_rerun_preserves_pull_failure_from_first_run
+    config = stub_config(target: @target, repos: [], packages: %w[config])
+    env = {
+      Dotlayer::Commands::Update::PULLED_ENV => "",
+      Dotlayer::Commands::Update::FAILED_ENV => "1"
+    }
+
+    result = nil
+    capture_io {
+      result = Dotlayer::Commands::Update.new(config:, detector: stub_detector, self_root: nil, env: env).run
+    }
+
+    refute result
+    refute env.key?(Dotlayer::Commands::Update::FAILED_ENV)
+  end
+
   def test_no_unpushed_report_when_everything_is_on_origin
     clean = clone_behind("notes", new_commit: false)
     config = stub_config(

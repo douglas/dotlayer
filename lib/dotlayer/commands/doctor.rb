@@ -48,9 +48,12 @@ module Dotlayer
         run_check("stow installed") { check_stow_installed }
         run_check("repos exist") { check_repos_exist }
         run_check("packages exist") { check_packages_exist(@packages) }
+        run_check("no cross-layer collisions") { check_layer_collisions }
         run_check("no broken symlinks") { check_broken_symlinks }
         run_check("managed files are links") { check_unlinked_files }
+        run_check("no stale layer links") { check_stale_layers(resolver) }
         run_check("no dangling links into repos") { check_dangling_repo_links }
+        run_check("system files up to date") { check_system_files } if detection.os == "linux" && @config.system_files.any?
 
         puts
         if @issues.empty?
@@ -86,7 +89,10 @@ module Dotlayer
 
       def check_stow_installed
         print "  Checking stow... "
-        if (@stow_installed = system("which", "stow", out: File::NULL, err: File::NULL))
+        @stow_installed = ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).any? do |dir|
+          File.executable?(File.join(dir, "stow"))
+        end
+        if @stow_installed
           ok "installed"
         else
           error "missing"
@@ -113,6 +119,71 @@ module Dotlayer
             @issues << "Package directory missing: #{pkg_path}"
           end
         end
+      end
+
+      IGNORED_COLLISION_NAMES = %w[.gitkeep .stow-local-ignore .DS_Store].freeze
+
+      def check_layer_collisions
+        owners = {}
+        collisions = []
+        @packages.each do |repo_path, package|
+          pkg_dir = File.join(repo_path, package)
+          next unless Dir.exist?(pkg_dir)
+
+          target = @config.target_for(repo_path, package)
+          label = "#{File.basename(repo_path)}/#{package}"
+          Dir.glob("**/*", File::FNM_DOTMATCH, base: pkg_dir).each do |rel|
+            base = File.basename(rel)
+            next if %w[. ..].include?(base) || IGNORED_COLLISION_NAMES.include?(base)
+
+            full = File.join(pkg_dir, rel)
+            next if File.directory?(full) && !File.symlink?(full)
+
+            dest = File.join(target, rel)
+            if owners.key?(dest)
+              collisions << [dest, owners[dest], label]
+            else
+              owners[dest] = label
+            end
+          end
+        end
+
+        collisions.each do |dest, first, second|
+          @issues << "Cross-layer collision at #{dest}: #{first} and #{second}"
+        end
+      end
+
+      def check_stale_layers(resolver)
+        return unless @stow_installed && resolver.respond_to?(:stale)
+
+        stale = resolver.stale
+        return if stale.empty?
+
+        stow = Stow.new(target: @config.target, dry_run: true, quiet: true)
+        stale.each do |repo_path, package|
+          removed = stow.unstow(repo_path, package, target: @config.target_for(repo_path, package))
+          if removed&.positive?
+            @issues << "Stale layer still linked: #{File.basename(repo_path)}/#{package} (#{removed} link(s))"
+          end
+        end
+      end
+
+      def check_system_files
+        first_repo = @config.repos.first
+        return unless first_repo
+
+        print "  Checking system files... "
+        pending = SystemFiles.pending(@config.system_files, first_repo)
+        if pending.empty?
+          ok "up to date"
+          return
+        end
+
+        warning "#{pending.size} pending"
+        pending.each do |change|
+          @issues << "System file out of date: #{change.dest} (#{change.reason})"
+        end
+        @hints << "To install pending system files: dotlayer install --yes"
       end
 
       def check_broken_symlinks

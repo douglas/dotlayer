@@ -5,7 +5,7 @@ module Dotlayer
   class DanglingLinks
     include Output
 
-    DEFAULT_MAX_DEPTH = 6
+    DEFAULT_MAX_DEPTH = 8
     SKIP_DIRS = %w[.cache node_modules .git].freeze
     SKIP_PATHS = %w[.local/share/Steam .local/state].freeze
     # macOS guards these home folders with privacy prompts, and reading one
@@ -34,6 +34,7 @@ module Dotlayer
     # empty, never a top-level directory of the target (so never ~/.config).
     # With dry_run it only prints. Returns the links removed (or that would be).
     def prune(dry_run: false, links: find.keys)
+      removed = []
       links.each do |link|
         if dry_run
           puts "  would remove #{link}"
@@ -42,10 +43,11 @@ module Dotlayer
           puts "  removed #{link}"
           remove_empty_parents(link)
         end
+        removed << link
       rescue SystemCallError => e
         error("  could not remove #{link}: #{e.message}")
       end
-      links
+      removed
     end
 
     # The global target plus every per-package target, minus targets that

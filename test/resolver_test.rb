@@ -220,6 +220,30 @@ class ResolverTest < Minitest::Test
     assert_equal %w[claude fonts zed], packages
   end
 
+  def test_non_base_dir_ending_in_os_suffix_is_not_stowed_as_layer
+    create_dirs("config", "notes-linux")
+    config = stub_config(
+      repos: [build_repo(path: @tmpdir, packages: %w[config], standalone_packages: [])],
+      packages: %w[config]
+    )
+
+    packages = resolve(config, build_detection(os: "linux"))
+
+    assert_equal %w[config], packages
+  end
+
+  def test_unmatched_group_package_is_reported_as_stale
+    create_dirs("config", "doximity")
+    config = stub_config(
+      repos: [build_repo(path: @tmpdir, packages: %w[config], standalone_packages: [], group_packages: {"doximity" => ["doximity"]})],
+      packages: %w[config]
+    )
+
+    resolver = Dotlayer::Resolver.new(config: config, detection: build_detection(groups: []))
+
+    assert_equal [[@tmpdir, "doximity"]], resolver.stale
+  end
+
   def test_layer_variant_does_not_match_prefix_substring
     create_dirs("config", "configure", "config-linux")
     config = stub_config(repos: [build_repo(path: @tmpdir)], packages: %w[config])

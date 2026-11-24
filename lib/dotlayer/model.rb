@@ -1,3 +1,6 @@
+require "open3"
+require "rbconfig"
+
 module Dotlayer
   # The hardware model text a machine reports, read straight from the files
   # `machines:` rules with `model:` match against. root is injectable for tests.
@@ -14,12 +17,25 @@ module Dotlayer
     # {"/sys/class/dmi/id/product_name" => "ThinkPad ...", ...}: every
     # readable, non-empty source. NULs (device-tree) are stripped.
     def self.read(root: "/")
-      SOURCES.each_with_object({}) do |relative, found|
+      found = SOURCES.each_with_object({}) do |relative, acc|
         text = File.read(File.join(root, relative)).delete("\0").strip
-        found["/#{relative}"] = text unless text.empty? || PLACEHOLDERS.include?(text)
+        acc["/#{relative}"] = text unless text.empty? || PLACEHOLDERS.include?(text)
       rescue SystemCallError
         next
       end
+
+      if root == "/" && RbConfig::CONFIG["host_os"] =~ /darwin/
+        hw = read_macos_model
+        found["sysctl:hw.model"] = hw if hw && !hw.empty?
+      end
+      found
+    end
+
+    def self.read_macos_model
+      output, status = Open3.capture2("sysctl", "-n", "hw.model", err: File::NULL)
+      status.success? ? output.strip : nil
+    rescue SystemCallError
+      nil
     end
 
     def self.match?(sources, patterns)

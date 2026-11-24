@@ -85,8 +85,12 @@ class JsonTest < Minitest::Test
     json, status = run_json("doctor")
 
     assert_equal %w[checks hints issue_count issues ok removed], json.keys.sort
-    assert_equal ["stow installed", "repos exist", "packages exist", "no broken symlinks",
-      "managed files are links", "no dangling links into repos"], json["checks"].map { |c| c["name"] }
+    expected_checks = [
+      "stow installed", "repos exist", "packages exist", "no cross-layer collisions",
+      "no broken symlinks", "managed files are links", "no stale layer links",
+      "no dangling links into repos", "system files up to date"
+    ]
+    assert_equal expected_checks, json["checks"].map { |c| c["name"] }
     assert json["checks"].all? { |c| c.key?("ok") && c["details"].is_a?(Array) }
     assert_equal json["ok"], json["issues"].empty?
     assert_equal json["issues"].size, json["issue_count"]

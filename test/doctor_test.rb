@@ -318,6 +318,27 @@ class DoctorTest < Minitest::Test
     assert_match(/2 issue/, output)
   end
 
+  def test_cross_layer_collision_reports_issue
+    tmpdir = Dir.mktmpdir
+    repo = File.join(tmpdir, "repo")
+    FileUtils.mkdir_p(File.join(repo, "config", ".config", "app"))
+    FileUtils.mkdir_p(File.join(repo, "config-linux", ".config", "app"))
+    File.write(File.join(repo, "config", ".config", "app", "conf"), "base")
+    File.write(File.join(repo, "config-linux", ".config", "app", "conf"), "linux")
+
+    config = stub_config(target: tmpdir, repos: [build_repo(path: repo)], packages: %w[config])
+
+    result = nil
+    output = capture_io {
+      result = Dotlayer::Commands::Doctor.new(config:, detector: stub_detector).run
+    }.first
+
+    refute result
+    assert_match(/Cross-layer collision/, output)
+  ensure
+    FileUtils.rm_rf(tmpdir)
+  end
+
   def test_no_issues_when_healthy
     tmpdir = Dir.mktmpdir
     repo = File.join(tmpdir, "repo")

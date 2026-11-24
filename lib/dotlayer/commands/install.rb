@@ -53,6 +53,7 @@ module Dotlayer
 
         abort_failed_packages(failures) if failures.positive?
 
+        run_hooks("after_stow", confirm_prompt: false)
         install_system_files if detection.os == "linux"
 
         puts
@@ -119,9 +120,10 @@ module Dotlayer
 
         return unless @dry_run || approve_system_files(pending)
 
+        before_failures = @system_failures
         pending.each { |change| install_system_file(change) }
 
-        run_hooks("after_system_files")
+        run_hooks("after_system_files") if @system_failures == before_failures
       end
 
       def approve_system_files(pending)
@@ -169,14 +171,14 @@ module Dotlayer
         end
       end
 
-      def run_hooks(name)
+      def run_hooks(name, confirm_prompt: true)
         commands = Array(@config.hooks[name])
         return if commands.empty?
 
         puts
         heading "Running #{name} hooks"
 
-        unless @dry_run
+        if confirm_prompt && !@dry_run
           return unless confirm("The following commands will be executed:", commands)
         end
 

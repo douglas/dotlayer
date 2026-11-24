@@ -81,11 +81,12 @@ module Dotlayer
         content = self.class.script(name, config_path: explicit_config_path)
 
         if File.exist?(path) || File.symlink?(path)
-          unless File.read(path).include?(MARKER)
+          existing = File.exist?(path) ? File.read(path) : nil
+          unless existing&.include?(MARKER)
             @refused = true
             return error("    #{name}: a hook that dotlayer did not write already exists, refusing to touch it: #{path}")
           end
-          return puts("    #{name}: already installed") if File.read(path) == content
+          return puts("    #{name}: already installed") if existing == content
 
           puts "    #{name}: updating"
         else

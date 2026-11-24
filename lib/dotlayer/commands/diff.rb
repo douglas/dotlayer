@@ -37,12 +37,14 @@ module Dotlayer
       def run_text
         detection = @detector.detect
         @summary = {os: detection.os, profile: detection.profile, machine: detection.machine}
-        packages = Resolver.new(config: @config, detection: detection).resolve
+        resolver = Resolver.new(config: @config, detection: detection)
+        packages = resolver.resolve
         stow = Stow.new(target: @config.target, dry_run: true, verbose: true, quiet: true)
 
         heading "Diff (#{detection.os}/#{detection.profile}/#{detection.machine})"
         puts
 
+        diff_stale_layers(stow, resolver.stale)
         packages.each { |repo_path, package| diff_package(stow, repo_path, package) }
         diff_system_files if detection.os == "linux"
 
@@ -57,6 +59,20 @@ module Dotlayer
           warning "#{@pending} change(s) pending."
         end
         @pending.zero?
+      end
+
+      def diff_stale_layers(stow, stale)
+        stale.each do |repo_path, package|
+          target = @config.target_for(repo_path, package)
+          next unless Dir.exist?(target)
+
+          removed = stow.unstow(repo_path, package, target:)
+          next unless removed&.positive?
+
+          puts "  #{yellow(package)} (#{File.basename(repo_path)}, stale)"
+          puts "    #{yellow("UNSTOW")}  #{removed} link(s) to remove"
+          @pending += removed
+        end
       end
 
       def diff_package(stow, repo_path, package)

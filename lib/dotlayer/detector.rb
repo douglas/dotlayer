@@ -1,4 +1,5 @@
 require "open3"
+require "socket"
 
 module Dotlayer
   # model: {source path => text} read from the hardware, for display and rules.
@@ -11,6 +12,8 @@ module Dotlayer
   # Chassis types from the SMBIOS spec that mean a portable or fixed machine.
   LAPTOP_CHASSIS = %w[8 9 10 14 30 31 32].freeze
   DESKTOP_CHASSIS = %w[3 4 5 6 7 15 16 35].freeze
+  LAPTOP_CHASSIS_NAMES = %w[laptop notebook convertible portable hand-held tablet].freeze
+  DESKTOP_CHASSIS_NAMES = %w[desktop tower all-in-one].freeze
 
   class Detector
     # root is the filesystem root the hardware files are read from.
@@ -57,38 +60,61 @@ module Dotlayer
       chassis_profile || "desktop"
     end
 
-    # Without a profiles: detect command: DMI chassis_type, then hostnamectl.
+    # Without a profiles: detect command: DMI chassis_type, then hostnamectl (Linux)
+    # or internal battery check (macOS).
     def chassis_profile
       type = File.read(File.join(@root, "sys/class/dmi/id/chassis_type")).strip
       return "laptop" if LAPTOP_CHASSIS.include?(type)
       return "desktop" if DESKTOP_CHASSIS.include?(type)
 
-      hostnamectl_chassis
+      hostnamectl_chassis || macos_chassis
     rescue SystemCallError
-      hostnamectl_chassis
+      hostnamectl_chassis || macos_chassis
     end
 
     def hostnamectl_chassis
       output, status = Open3.capture2("hostnamectl", "chassis", err: File::NULL)
-      chassis = output.strip
-      chassis if status.success? && !chassis.empty?
+      chassis = output.strip.downcase
+      return nil unless status.success? && !chassis.empty?
+      return "laptop" if LAPTOP_CHASSIS_NAMES.include?(chassis)
+      return "desktop" if DESKTOP_CHASSIS_NAMES.include?(chassis)
+
+      chassis
+    rescue SystemCallError
+      nil
+    end
+
+    def macos_chassis
+      return nil unless detect_os == "macos" && @root == "/"
+
+      output, status = Open3.capture2("pmset", "-g", "batt", err: File::NULL)
+      return "laptop" if status.success? && output.include?("InternalBattery")
+
+      "desktop"
     rescue SystemCallError
       nil
     end
 
     def detect_machine
       from_env = ENV[@config.machine_env]
-      return normalize_tag(from_env) if from_env && !from_env.empty?
+      if from_env && !from_env.empty?
+        tag = normalize_tag(from_env)
+        return tag unless tag.empty?
+      end
 
       detected = @config.machines.find do |name, entry|
         next false if name == "env"
 
         machine_matches?(entry)
       end
-      return normalize_tag(detected.first) if detected
+      if detected
+        tag = normalize_tag(detected.first)
+        return tag unless tag.empty?
+      end
 
-      output, status = Open3.capture2("hostname", "-s", err: File::NULL)
-      return normalize_tag(output) if status.success? && !output.strip.empty?
+      host = Socket.gethostname.split(".").first
+      tag = normalize_tag(host)
+      return tag unless tag.empty?
 
       "unknown"
     end

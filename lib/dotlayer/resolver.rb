@@ -31,8 +31,9 @@ module Dotlayer
         dirs = top_level_dirs(repo.path)
         _layers, matched_dirs = resolve_layers(repo, base_packages, dirs)
         resolved = resolve_standalone(repo, base_packages, matched_dirs, dirs).map(&:last)
+        all_group_pkgs = repo.group_packages.values.flatten
         dirs
-          .select { |d| layer_variant?(d, base_packages) && !matched_dirs.include?(d) && !resolved.include?(d) }
+          .select { |d| (layer_variant?(d, base_packages) || all_group_pkgs.include?(d)) && !matched_dirs.include?(d) && !resolved.include?(d) }
           .sort
           .map { |d| [repo.path, d] }
       end
@@ -89,6 +90,7 @@ module Dotlayer
 
       dirs.each do |dir|
         next if base_packages.include?(dir)
+        next unless layer_variant?(dir, base_packages)
 
         case dir
         when *@detection.distros.map { |d| suffix("-#{d}-#{@detection.profile}-#{@detection.machine}") }
@@ -157,6 +159,7 @@ module Dotlayer
       Dir.children(repo_path)
         .select { |d| File.directory?(File.join(repo_path, d)) }
         .reject { |d| d.start_with?(".") }
+        .sort
     end
 
     # Returns true if dir looks like a layer variant of any base package.

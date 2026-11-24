@@ -49,10 +49,9 @@ module Dotlayer
 
     # {blocking path => repo file it blocks}
     def find_blockers(pkg_dir, target)
-      repo_roots = @config.repos.map(&:path)
       candidates(pkg_dir).each_with_object({}) do |rel, found|
         repo_file = File.join(pkg_dir, rel)
-        path = blocking_path(target, rel, repo_roots)
+        path = blocking_path(target, rel, pkg_dir)
         next if path.nil? || @handled.key?(path) || File.identical?(path, repo_file)
 
         found[path] = repo_file
@@ -71,11 +70,11 @@ module Dotlayer
     end
 
     # The first path along rel under target that stops stow, or nil.
-    def blocking_path(target, rel, repo_roots)
+    def blocking_path(target, rel, pkg_dir)
       parts = rel.split("/")
       parts.each_index do |i|
         path = File.join(target, *parts[0..i])
-        return (foreign_link?(path, repo_roots) ? path : nil) if File.symlink?(path)
+        return (foreign_link?(path, pkg_dir) ? path : nil) if File.symlink?(path)
         return nil unless File.exist?(path)
 
         return path unless File.directory?(path)
@@ -83,9 +82,9 @@ module Dotlayer
       nil
     end
 
-    def foreign_link?(path, repo_roots)
+    def foreign_link?(path, pkg_dir)
       absolute = File.expand_path(File.readlink(path), File.dirname(path))
-      repo_roots.none? { |root| absolute.start_with?("#{root}/") }
+      !File.exist?(path) || !absolute.start_with?("#{pkg_dir}/")
     end
 
     def refused_paths(repo_path, package, target, paths)
